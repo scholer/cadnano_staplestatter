@@ -92,21 +92,66 @@ def plotscores_histogram(scores):
     return n, bins, patches
 
 
-def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Frequency / count"):
+def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Frequency / count", title=None,
+                     ax=None, fig=None, subplotkey=111, xoffset=0, xlim_min=None, **kwargs):
     """
     Plot score frequencies.
+    You can re-use an existing figure by providing an axis with ax keyword,
+    or fig
+
+    **kwargs are passed to the vlines plotting method. These may include:
+        colors, linestyles, label, and generic,
+        and other generic matplotlib.collections.LineCollection properties
+        (agg_filter, alpha, linewidth, linestyles, etc...)
+
+    Instead of xoffset=<const>, you can also specify offsets=[<float>]*len(scorefreqs)
+    as kwarg to ax.vlines.
+
+    to remove a set line collection:
+        lc = ax.collections[0]
+        lc.remove()
+    to remove all lines in an axes:
+        loops = 0
+        while ax.collections and loops < 15: # prevent infinite loop
+            ax.collections.pop().remove()
+
+    subplotkey is provided to add_subplot if making subfigure, keys are (numrows, numcols, plotnum)
+
     """
-    fig = pyplot.figure(figsize=(12, 6))    # If you are in interactive mode, the figure will appear immediately.
-    ax = fig.add_subplot(111)
+    if ax is None:
+        if fig is None:
+            fig = pyplot.figure(figsize=(12, 6))    # If you are in interactive mode, the figure will appear immediately.
+        ax = fig.add_subplot(subplotkey)
     values, counts = zip(*scorefreqs)
-    lines = ax.vlines(values, [0], counts)  # lines can also be obtained from ax.collections list.
+
+    if xoffset:
+        # actually, I think you can just pass offset as offsets kwargs...
+        values = [val+xoffset for val in values]
+
+    if 'lw' not in kwargs and 'linewidth' not in kwargs and 'linewidths' not in kwargs:
+        kwargs['linewidth'] = 2
+
+    # PLOT:
+    lines = ax.vlines(values, [0], counts, **kwargs)  # lines can also be obtained from ax.collections list.
+
+    # ADJUST THE PLOT:
     valrange = max(values) - min(values)
-    ax.set_xlim(min(values)-0.1*valrange, max(values+(min_score_visible,))+0.1*valrange)
-    ax.set_ylim(0, max(counts)*0.1)
+    xlim = [min(values)-0.1*valrange, max(max(values), min_score_visible)+0.1*valrange]
+    if xlim_min is not None and xlim_min < xlim[0]:
+        xlim[0] = xlim_min
+    ax.set_xlim(xlim)
+    ax.set_ylim(0, max(counts)*1.1)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    if valrange > 10:
+        #ax.set_xticks([2*i for i in xrange(0, int(xlim[1]))])
+        ax.minorticks_on()
+    print "logger 2"
+    if title:
+        ax.set_title(title)
     pyplot.draw()  # update figure (if in interactive mode...)
     # fig.draw(artist, renderer)    # requires you to know how to draw...
-    return fig, ax, lines
+    return ax, lines
+
 
 

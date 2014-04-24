@@ -42,6 +42,10 @@ def leftrightmaxdiff(T_array):
     ([14, -7, -7, 7], [-7, -14, -14, 21])
     >>> leftrightmaxdiff([14, 13, 12, 13, 14])
     ([14, -1, -2, -1, 0], [0, -1, -2, -1, 14])
+    >>> leftrightmaxdiff([23])
+    ([23], [23])
+    >>> leftrightmaxdiff([])
+    ([], [])
     """
     T_pad = [0] + T_array + [0] # use 1-based indexing
     # remember, array[0:2] slice goes from index 0 up to BUT NOT INCLUDING 2, i.e. 0 and 1.
@@ -68,6 +72,11 @@ def valleyfinder(T_array, limit=0):
         [0, 1, 1, 1, 0]
         >>> valleyfinder([14, 13, 12, 13, 14], 1)
         [0, 0, 1, 0, 0]
+        >>> valleyfinder([23])
+        [0]
+        >>> valleyfinder([])
+        []
+
     """
     #leftbound, rightbound = leftrightmaxdiff(T_array)
     #valleyarray = [1 if leftbound[i] < limit and rightbound[i] < limit else 0 for i in range(len(T_array))]
@@ -89,6 +98,10 @@ def valleyscore(T_array, limit=0):
         3
         >>> valleyscore([14, 13, 12, 13, 14], 1)
         1
+        >>> valleyscore([23])
+        0
+        >>> valleyscore([])
+        0
     """
     return sum(valleyfinder(T_array, limit))
 
@@ -104,7 +117,14 @@ def isglobalmax(T_array, limit=0):
         [1, 0, 0, 0, 1]
         >>> isglobalmax([14, 13, 12, 13, 14], limit=1)
         [1, 1, 0, 1, 1]
+        >>> isglobalmax([23])
+        [1]
+        >>> isglobalmax([])
+        []
     """
+    if len(T_array) == 1:
+        # T_array[i+1:] would fail for this
+        return [1]
     return [1 if t-max(T_array[:i]+T_array[i+1:])>=-limit else 0 for i, t in enumerate(T_array)]
 
 
@@ -120,7 +140,14 @@ def globalmaxcount(T_array, limit=0):
         2
         >>> globalmaxcount([14, 13, 12, 13, 14], limit=1)
         4
+        >>> globalmaxcount([23])
+        1
+        >>> globalmaxcount([])
+        0
     """
-    Tcopy = T_array
     return sum(isglobalmax(T_array, limit))
+
+
+def maxlength(T_array):
+    return max(T_array) if T_array else 0
 

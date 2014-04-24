@@ -29,16 +29,53 @@ If you just want to execute some code, the easiest way is:
     execfile(<path-to-file>)
 
 
+Other nice-to-have:
+
+designname = os.path.splitext(os.path.basename(dc().filename()))[0]
+
 """
 
+import os
 
 import logging
 logger = logging.getLogger(__name__)
 # Note: Use pytest-capturelog to capture and display logging messages during pytest
 
 
-from statutils import valleyscore, globalmaxcount
+try:
+    import matplotlib
+    from matplotlib import pyplot
+except ImportError:
+    print "matplotlib library not available, unable to plot."
+    matplotlib = None
+    pyplot = None
+
+cadnano_api = None
+try:
+    import cadnano_api
+except ImportError:
+    try:
+        from cadnano import cadnano_api
+    except ImportError:
+        print "Could not import cadnano api..."
+        def a():
+            import cadnano
+            return cadnano.app()
+        def d():
+            return a().d
+        def p():
+            return d().selectedPart()
+        # Provisory api:
+        api = dict(a=a, d=d, p=p)
+
+if cadnano_api:
+    api = cadnano_api.get_api()
+    locals().update(api)
+
+from statutils import valleyscore, globalmaxcount, maxlength
 import cadnanoreader
+import plotutils
+from plotutils import plot_frequencies
 
 
 def evaluate_part_oligos(cadnano_part, scoremethod=None):
@@ -58,7 +95,7 @@ def evaluate_part_oligos(cadnano_part, scoremethod=None):
     return scores
 
 
-def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printtofile=False):
+def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printtofile=False, hightolow=True):
     """
     Returns a sorted list of tuples:
         (score, oligo-name)
@@ -68,7 +105,7 @@ def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printt
     If printstats=True, will print to stdout
     If printtofile is a filepath, will print to this filepath.
     """
-    score_name_tups = sorted(((score, name) for name, score in scores.items() if score>threshold), reverse=True)
+    score_name_tups = sorted(((score, name) for name, score in scores.items() if score>threshold), reverse=hightolow)
     if highest and highest < len(score_name_tups):
         score_name_tups = score_name_tups[:highest]
     if printstats or printtofile:
@@ -96,7 +133,61 @@ def score_frequencies(scores):
     entries in scores with that value.
     Mostly usable for scoremethods that produce integer values.
     """
-    valueset = set(scores.values())
-    scorefreq = sorted((value, scores.values().count(value)) for value in valueset)
+    try:
+        values = scores.values()
+    except AttributeError:
+        # if not a dict, it is probably just a list of values...
+        values = scores
+    valueset = set(values)
+    scorefreq = sorted((value, values.count(value)) for value in valueset)
     return scorefreq
 
+
+
+
+def plotpartstats(part=None, filename=None):
+    """
+    Invoke with e.g.
+        f7, scoreaxes, allscores = plotpartstats(p())
+
+    """
+
+    if not matplotlib:
+        print "No matplotlib"
+        return
+
+    import matplotlib.gridspec as gridspec
+
+    if part is None:
+        # only works if run in e.g. interactive cadnano with a p() global
+        part = api.p()
+    if filename is None:
+        filename = part.document().controller().filename()
+
+    filename = os.path.basename(filename)
+    designname = os.path.splitext(filename)[0]
+
+    fig = pyplot.figure()
+
+    scoremethods = maxlength, valleyscore, globalmaxcount
+    xlabels = ["Max hybridization length", "Number of valley stretches", "Number of global maxima"]
+    #titles = ["{}: {} histogram".format(designname, desc) for desc in ("Hybridization length", "Valley scores", "Global maxima")]
+    titles = ["{} : Staplestrand stats".format(designname), "", ""]
+    colors = 'krb'
+    # using gridspec, c.f. http://matplotlib.org/users/gridspec.html
+    gs = gridspec.GridSpec(2, 2) # two by two, gridspec is 0-based.
+    gridspecs = (gs[0, :], gs[1, 0], gs[1, 1])
+    scoreaxes = [pyplot.subplot(gsdef) for gsdef in gridspecs]
+
+    # alternatively, you could just have used
+    # subfigkeys = [211, 223, 224]  # the second and third plot will update automatically.
+
+    allscores = list()
+    for i, method in enumerate(scoremethods):
+        scores = evaluate_part_oligos(part, scoremethod=method)
+        allscores.append(scores)
+        score_freqs = score_frequencies(scores)
+        plot_frequencies(score_freqs, ax=scoreaxes[i], xlim_min=0,
+                         xlabel=xlabels[i], title=titles[i], color=colors[i], label=designname[:10])
+
+    return fig, scoreaxes, allscores
