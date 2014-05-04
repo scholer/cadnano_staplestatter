@@ -118,12 +118,19 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
     subplotkey is provided to add_subplot if making subfigure, keys are (numrows, numcols, plotnum)
 
     """
+    print "xlabel: ", xlabel, "; kwargs: ", kwargs
     if ax is None:
         if fig is None:
             fig = pyplot.figure(figsize=(12, 6))    # If you are in interactive mode, the figure will appear immediately.
         ax = fig.add_subplot(subplotkey)
     values, counts = zip(*scorefreqs)
 
+    # Auto-adjust xoffset:
+    if xoffset == 'auto':
+        xoffset = 0.1 * len(ax.collections)
+        print "xoffset auto adjusted to: ", xoffset
+    else:
+        print "xoffset: ", xoffset
     if xoffset:
         # actually, I think you can just pass offset as offsets kwargs...
         values = [val+xoffset for val in values]
@@ -132,7 +139,8 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
         kwargs['linewidth'] = 2
 
     # PLOT:
-    lines = ax.vlines(values, [0], counts, **kwargs)  # lines can also be obtained from ax.collections list.
+    #lines = ax.vlines(values, [0], counts, **kwargs)  # lines can also be obtained from ax.collections list.
+    lines = pyplot.vlines(values, [0], counts, axes=ax, **kwargs)  # lines can also be obtained from ax.collections list.
 
     # ADJUST THE PLOT:
     valrange = max(values) - min(values)
@@ -146,7 +154,6 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
     if valrange > 10:
         #ax.set_xticks([2*i for i in xrange(0, int(xlim[1]))])
         ax.minorticks_on()
-    print "logger 2"
     if title:
         ax.set_title(title)
     pyplot.draw()  # update figure (if in interactive mode...)
@@ -155,3 +162,23 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
 
 
 
+def plot_statspec(scorefreqs, plotspec, fig=None, ax=None):
+    """
+    Used by staplestatter.process_statspec() to plot score frequences.
+    """
+    subplot = plotspec.get('subplot')
+    if subplot:
+        if fig:
+            ax = fig.add_subplot(subplot)
+        else:
+            ax = pyplot.subplot(subplot)
+    ax, lines = plot_frequencies(scorefreqs, fig=fig, ax=ax, **plotspec.get('plot_kwargs', dict()))
+    print "plotspec: ", plotspec
+    adjustfuncs = ('title', 'xlim', 'ylim')
+    for cand in adjustfuncs:
+        if cand in plotspec:
+            # consider using ax instead of pyplot? However, then you should use 'set_'+cand
+            getattr(pyplot, cand)(plotspec[cand]) # equivalent to pyplot.title(plotspec['title'])
+    if 'legend' in plotspec:
+        pyplot.legend(**plotspec['legend'])
+    return ax, lines

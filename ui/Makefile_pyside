@@ -1,0 +1,8 @@
+# Makefile for creating PySide ui. Make with: make -f Makefile_pyside
+
+SUBDIR=pyside_ui/
+
+all: $(SUBDIR)staplestatter_ui.py
+
+$(SUBDIR)staplestatter_ui.py : staplestatter.ui
+	pyside-uic $< > $@

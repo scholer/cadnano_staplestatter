@@ -1,0 +1,16 @@
+# See USAGE.txt for info
+statspecs:
+- scoremethod: valleyscore
+  scoremethod_kwargs: {margin : 0}
+  plotspec:
+    plot_kwargs: {hold: true, color: k, xoffset: auto, label: word up}
+    label_fmt : "{designname}"
+    xlabel_fmt : "{scoremethod}"
+    subplot: 211
+    legend:
+      loc: 0
+      prop: {size : small}
+  printspec: { highest : 5, threshold : 0, printstats: true, printtofile : false, hightolow : true }
+figure:
+  title: false
+  newfigure: false

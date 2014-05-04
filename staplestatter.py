@@ -16,7 +16,6 @@
 ##
 # pylintxx: disable-msg=C0103,C0301,C0302,R0201,R0902,R0904,R0913,W0142,W0201,W0221,W0402
 
-
 """
 Main module for evaluating a cadnano design.
 
@@ -36,21 +35,27 @@ designname = os.path.splitext(os.path.basename(dc().filename()))[0]
 """
 
 import os
-
+import yaml
 import logging
 logger = logging.getLogger(__name__)
 # Note: Use pytest-capturelog to capture and display logging messages during pytest
 
-
 try:
     import matplotlib
+    matplotlib.use('Qt4Agg') # Must always be called *before* importing pyplot
     from matplotlib import pyplot
 except ImportError:
     print "matplotlib library not available, unable to plot."
     matplotlib = None
     pyplot = None
 
-cadnano_api = None
+#from statutils import valleyscore, globalmaxcount, maxlength
+import statutils
+import cadnanoreader
+import plotutils
+from plotutils import plot_frequencies
+
+
 try:
     import cadnano_api
 except ImportError:
@@ -58,40 +63,36 @@ except ImportError:
         from cadnano import cadnano_api
     except ImportError:
         print "Could not import cadnano api..."
-        def a():
-            import cadnano
-            return cadnano.app()
-        def d():
-            return a().d
-        def p():
-            return d().selectedPart()
-        # Provisory api:
-        api = dict(a=a, d=d, p=p)
-
-if cadnano_api:
-    api = cadnano_api.get_api()
-    locals().update(api)
-
-from statutils import valleyscore, globalmaxcount, maxlength
-import cadnanoreader
-import plotutils
-from plotutils import plot_frequencies
+        class cadnano_api(object):
+            """ Used as namespace to simulate the cadnano_api module (by defining a range of static methods) """
+            @staticmethod
+            def a():
+                """ Returns app instance. """
+                import cadnano
+                return cadnano.app()
+            @staticmethod
+            def d():
+                """ Returns document object (model). """
+                return cadnano_api.a().d
+            @staticmethod
+            def p():
+                """ Returns part object (model). """
+                return cadnano_api.d().selectedPart()
 
 
-def evaluate_part_oligos(cadnano_part, scoremethod=None):
+
+def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None):
     """
     Evaluate part oligos.
-    """
-    if scoremethod is None:
-        scoremethod = valleyscore
-
-    oligo_hybridization_patterns = cadnanoreader.get_oligo_hyb_patterns(cadnano_part)
-
     # This should be a (possibly ordered) dict, as:
     # oligos[<oligo name>] = [list of integers representing hybridization lengths or melting temperatures]
-    scores = {oligo_key : scoremethod(hyb_pattern) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
-
-
+    """
+    if scoremethod is None:
+        scoremethod = statutils.valleyscore
+    if scoremethod_kwargs is None:
+        scoremethod_kwargs = dict()
+    oligo_hybridization_patterns = cadnanoreader.get_oligo_hyb_patterns(cadnano_part)
+    scores = {oligo_key : scoremethod(hyb_pattern, **scoremethod_kwargs) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
     return scores
 
 
@@ -125,69 +126,145 @@ def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printt
     return score_name_tups
 
 
-def score_frequencies(scores):
+
+def plotpartstats(part=None, designname=None):
     """
-    Produce a sorted list of tuples
-        (value, count)
-    where value is a score value and count is the number of
-    entries in scores with that value.
-    Mostly usable for scoremethods that produce integer values.
-    """
-    try:
-        values = scores.values()
-    except AttributeError:
-        # if not a dict, it is probably just a list of values...
-        values = scores
-    valueset = set(values)
-    scorefreq = sorted((value, values.count(value)) for value in valueset)
-    return scorefreq
-
-
-
-
-def plotpartstats(part=None, filename=None):
-    """
+    Reference method, will plot a "default" stat spec.
     Invoke with e.g.
         f7, scoreaxes, allscores = plotpartstats(p())
-
     """
-
     if not matplotlib:
         print "No matplotlib"
         return
-
-    import matplotlib.gridspec as gridspec
-
+    else:
+        import matplotlib.gridspec as gridspec
     if part is None:
-        # only works if run in e.g. interactive cadnano with a p() global
-        part = api.p()
-    if filename is None:
-        filename = part.document().controller().filename()
-
-    filename = os.path.basename(filename)
-    designname = os.path.splitext(filename)[0]
+        part = cadnano_api.p()
+    if designname is None:
+        designname = os.path.splitext(os.path.basename(part.document().controller().filename()))[0]
 
     fig = pyplot.figure()
 
-    scoremethods = maxlength, valleyscore, globalmaxcount
+    scoremethods = ('maxlength', 'valleyscore', 'globalmaxcount')
     xlabels = ["Max hybridization length", "Number of valley stretches", "Number of global maxima"]
     #titles = ["{}: {} histogram".format(designname, desc) for desc in ("Hybridization length", "Valley scores", "Global maxima")]
     titles = ["{} : Staplestrand stats".format(designname), "", ""]
     colors = 'krb'
     # using gridspec, c.f. http://matplotlib.org/users/gridspec.html
     gs = gridspec.GridSpec(2, 2) # two by two, gridspec is 0-based.
-    gridspecs = (gs[0, :], gs[1, 0], gs[1, 1])
-    scoreaxes = [pyplot.subplot(gsdef) for gsdef in gridspecs]
+    scoreaxes = [pyplot.subplot(gsdef) for gsdef in (gs[0, :], gs[1, 0], gs[1, 1])]
 
     # alternatively, you could just have used
     # subfigkeys = [211, 223, 224]  # the second and third plot will update automatically.
 
     allscores = list()
     for i, method in enumerate(scoremethods):
-        scores = evaluate_part_oligos(part, scoremethod=method)
+        scoremethod = getattr(statutils, method)
+        scores = score_part_oligos(part, scoremethod=scoremethod)
         allscores.append(scores)
-        score_freqs = score_frequencies(scores)
+        score_freqs = statutils.frequencies(scores)
         plot_frequencies(score_freqs, ax=scoreaxes[i], xlim_min=0,
                          xlabel=xlabels[i], title=titles[i], color=colors[i], label=designname[:10])
 
     return fig, scoreaxes, allscores
+
+
+def process_statspec(statspec, part=None, designname=None, fig=None, ax=None):
+    """
+    Will process a single stat specification.
+    statspec is a dict with keys:
+      scoremethod : The method name from statutils module to use to score the hyb pattern.
+      scoremethod_kwargs: keyword arguments to pass to the score method.
+      plot_axis: 211    # n-rows, n-cols, plot-number;
+      plot_kwargs: {hold: true}
+      plot_xlim: [0, 5]
+      plot_ylim: [0, 200]
+      plot_title: Plot test
+      printspec: { highest : 10, threshold : 0, printstats: false, printtofile : false, hightolow : true }
+
+    Regarding subfigures, you can use e.g.:
+        # subfigkeys = [211, 223, 224]  # the first plot will second and third plot will update automatically.
+    """
+    if part is None:
+        part = cadnano_api.p()
+    plotspec = statspec.get('plotspec', dict())
+    try:
+        scoremethod = getattr(statutils, statspec['scoremethod'])
+    except AttributeError:
+        print "ERROR -- Method '", statspec['scoremethod'], "' in statspec was not found in statutils, continuing with next!"
+        return
+    except KeyError:
+        print "ERROR -- statspec does not have a key 'scoremethod', aborting this entry!"
+        return
+    scoremethod_kwargs = statspec.get('scoremethod_kwargs', dict())
+
+    # Adjust auto stuff:
+    format_keys = dict(plotspec, designname=designname, scoremethod=statspec['scoremethod'], **scoremethod_kwargs)
+    print "format_keys: ", format_keys
+    autoformat_defaults = dict(title="{scoremethod}", label="{designname}", xlabel="{scoremethod}")
+    for autofmtkey in ('title', 'label', 'xlabel'):
+        if plotspec.get(autofmtkey, None) in (None, 'auto'):
+            fmt = plotspec.get(autofmtkey+'_fmt', autoformat_defaults[autofmtkey])
+            # I might want to set to None in the plotspec to NOT have it.
+            if fmt:
+                plotspec.setdefault('plot_kwargs', dict())[autofmtkey] = fmt.format(**format_keys)
+
+    # Get scores:
+    scores = score_part_oligos(part, scoremethod=scoremethod, scoremethod_kwargs=scoremethod_kwargs)
+    # Make frequencies:
+    scorefreqs = statutils.frequencies(scores) if statspec.get('plot_frequencies', True) else None
+    # Plot
+    plotutils.plot_statspec(scorefreqs, plotspec, fig=fig, ax=ax)
+    # Post-processing (?)
+
+    return scores
+
+
+
+def process_statspecs(directive, part=None, designname=None):
+    """
+    Main processor for the staplestatter directive. Responsible for:
+    1) Initialize figure and optionally axes as specified by the directive instructions.
+    2) Loop over all statspecs and call process_statspec.
+    3) Aggregate and return a list of stats/scores.
+    """
+    if part is None:
+        part = cadnano_api.p()
+    if designname is None:
+        designname = os.path.splitext(os.path.basename(part.document().controller().filename()))[0]
+    print "designname: ", designname
+
+    statspecs = directive['statspecs']
+    figspecs = directive.get('figure', dict())
+    if figspecs.get('newfigure', False):
+        fig = pyplot.figure()
+    else:
+        fig = pyplot.gcf() # Will make a new figure if no figure has been created.
+    # Here you can add more "figure/axes" specification logic:
+
+    pyplot.ion()
+    allscores = list()
+    for _, statspec in enumerate(statspecs):
+        scores = process_statspec(statspec, part=part, designname=designname, fig=fig)
+        allscores.append(scores)
+        if 'printspec' in statspec:
+            get_highest_scores(statspec['printspec']) # This logic is subject to change.
+    return allscores
+
+
+def process_statspecs_string(directive_string):
+    """
+    Process a statspecs string, yaml format.
+    """
+    directive = yaml.load(directive_string)
+    process_statspecs(directive)
+
+
+def process_statspecs_file(filepath):
+    """
+    Process a statspecs file, yaml format.
+    """
+    with open(filepath) as fd:
+        directive = yaml.load(fd)
+    process_statspecs(directive)
+

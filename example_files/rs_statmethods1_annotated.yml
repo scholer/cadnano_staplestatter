@@ -1,0 +1,21 @@
+# statspecs is a list of dicts, where each 'statspec' dict specifies a statistical scoring method
+# how to plot the data, and whether the data should also be printed.
+# plot_kwargs are passed to pyplot.vlines.
+statspecs:
+- scoremethod: valleyscore
+  scoremethod_kwargs: {margin : 0}  # keyword arguments passed to the scoremethod function.
+  plot_frequencies : true       # If true, will convert scores before plotting (default)
+  plotspec:
+    plot_kwargs: {hold: true, color: k, xlabel: RsScores, xoffset: auto, label: word up}
+    label_fmt : "{designname}"  # If this or 'label' is set, it will be used to update 'label' in plot_kwargs.
+    subplot: 211                # What subplot to plot on, as n-rows, n-cols, plot-number;
+    xlim: [-0.1, 5]                # Range limits of the x-axis.
+#    ylim: [0, 200]              # Range limits of the y-axis.
+    title: Plot test            # Title (on the sub-plot axis). Defaults to 'scoremethod'.
+    legend:             # Legend can be specified here or under figure.
+      loc: 0
+      prop: {size : x-small}  # prop dict passed to FontProperties. fontsize can also be passed directly.
+  printspec: { highest : 10, threshold : 0, printstats: false, printtofile : false, hightolow : true }
+figure:
+  title: false
+  newfigure: false
