@@ -56,7 +56,10 @@ except ImportError:
     pyplot = None
 else:
     # backend must be selected *before* importing pyplot, pylab or matplotlib.backends
-    matplotlib.use('Qt4Agg')    # 'agg' is just "anti-grain". Default is "Anti-Grain Geometry" C++ library.
+    if not matplotlib.get_backend().lower() == 'Qt4Agg'.lower():
+        print "matplotlib.get_backend() is: ", matplotlib.get_backend(), " -- resetting to Qt4Agg"
+        matplotlib.use('Qt4Agg') # Must always be called *before* importing pyplot
+    #matplotlib.use('Qt4Agg')    # 'agg' is just "anti-grain". Default is "Anti-Grain Geometry" C++ library.
     # should be the same as setting
     # matplotlib.rcParams['backend'] = 'Qt4Agg'.
     # Also check:
@@ -93,7 +96,7 @@ def plotscores_histogram(scores):
 
 
 def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Frequency / count", title=None,
-                     ax=None, fig=None, subplotkey=111, xoffset=0, xlim_min=None, **kwargs):
+                     ax=None, fig=None, subplotkey=111, xoffset=0, xlim_min=None, autocolors='krbgcmy', **kwargs):
     """
     Plot score frequencies.
     You can re-use an existing figure by providing an axis with ax keyword,
@@ -125,8 +128,16 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
         ax = fig.add_subplot(subplotkey)
     values, counts = zip(*scorefreqs)
 
+    # Auto-adjust color:
+    if kwargs.get('color') == 'auto':
+        kwargs['color'] = autocolors[len(ax.collections)]
+        print "color auto adjusted to: ", kwargs['color']
+    else:
+        print "color: ", kwargs['color']
+
     # Auto-adjust xoffset:
     if xoffset == 'auto':
+        xoffsetmultiplier = 0.1 if max(values) < 10 else 0.2
         xoffset = 0.1 * len(ax.collections)
         print "xoffset auto adjusted to: ", xoffset
     else:
@@ -149,12 +160,15 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
         xlim[0] = xlim_min
     ax.set_xlim(xlim)
     ax.set_ylim(0, max(counts)*1.1)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if ylabel:
+        ax.set_ylabel(ylabel)
     if valrange > 10:
         #ax.set_xticks([2*i for i in xrange(0, int(xlim[1]))])
         ax.minorticks_on()
     if title:
+        print "Setting axes/subplot title: ", title
         ax.set_title(title)
     pyplot.draw()  # update figure (if in interactive mode...)
     # fig.draw(artist, renderer)    # requires you to know how to draw...
@@ -174,9 +188,9 @@ def plot_statspec(scorefreqs, plotspec, fig=None, ax=None):
             ax = pyplot.subplot(subplot)
     ax, lines = plot_frequencies(scorefreqs, fig=fig, ax=ax, **plotspec.get('plot_kwargs', dict()))
     print "plotspec: ", plotspec
-    adjustfuncs = ('title', 'xlim', 'ylim')
+    adjustfuncs = ('title', 'xlim', 'ylim', 'ylabel')
     for cand in adjustfuncs:
-        if cand in plotspec:
+        if cand in plotspec and plotspec[cand]:
             # consider using ax instead of pyplot? However, then you should use 'set_'+cand
             getattr(pyplot, cand)(plotspec[cand]) # equivalent to pyplot.title(plotspec['title'])
     if 'legend' in plotspec:

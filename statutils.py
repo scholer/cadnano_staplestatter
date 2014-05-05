@@ -151,7 +151,8 @@ def globalmaxcount(T_array, margin=0):
     return sum(isglobalmax(T_array, margin))
 
 
-def maxlength(T_array):
+def maxlength(T_array, margin=0):
+    """ Margin has no effect, only for convenience. """
     return max(T_array) if T_array else 0
 
 

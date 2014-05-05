@@ -42,7 +42,8 @@ logger = logging.getLogger(__name__)
 
 try:
     import matplotlib
-    matplotlib.use('Qt4Agg') # Must always be called *before* importing pyplot
+    if not matplotlib.get_backend().lower() == 'Qt4Agg'.lower():
+        matplotlib.use('Qt4Agg') # Must always be called *before* importing pyplot
     from matplotlib import pyplot
 except ImportError:
     print "matplotlib library not available, unable to plot."
@@ -111,8 +112,8 @@ def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printt
         score_name_tups = score_name_tups[:highest]
     if printstats or printtofile:
 
-        output = "\n".join("Scored oligos: (score, name)",
-                            "\n".join("{:6} {}".format(score, name) for score, name in score_name_tups))
+        output = "\n".join(["Scored oligos: (score, name)",
+                            "\n".join("{:6} {}".format(score, name) for score, name in score_name_tups)])
         if printstats:
             print output
         if printtofile:
@@ -235,12 +236,16 @@ def process_statspecs(directive, part=None, designname=None):
     print "designname: ", designname
 
     statspecs = directive['statspecs']
-    figspecs = directive.get('figure', dict())
-    if figspecs.get('newfigure', False):
-        fig = pyplot.figure()
+    figspec = directive.get('figure', dict())
+    if figspec.get('newfigure', False) or len(pyplot.get_fignums()) < 1:
+        fig = pyplot.figure(**figspec.get('figure_kwargs', {}))
     else:
         fig = pyplot.gcf() # Will make a new figure if no figure has been created.
     # Here you can add more "figure/axes" specification logic:
+    adjustfuncs = ('title', 'size_inches', 'dpi')
+    for cand in adjustfuncs:
+        if cand in figspec and figspec[cand]:
+            getattr(fig, 'set_'+cand)(figspec[cand]) # equivalent to fig.title(figspec['title'])
 
     pyplot.ion()
     allscores = list()
@@ -248,8 +253,9 @@ def process_statspecs(directive, part=None, designname=None):
         scores = process_statspec(statspec, part=part, designname=designname, fig=fig)
         allscores.append(scores)
         if 'printspec' in statspec:
-            get_highest_scores(statspec['printspec']) # This logic is subject to change.
-    return allscores
+            print "Printing highest scores with: statspec['printspec']"
+            get_highest_scores(scores, **statspec['printspec']) # This logic is subject to change.
+    return dict(figure=fig, scores=allscores)
 
 
 def process_statspecs_string(directive_string):
@@ -257,7 +263,7 @@ def process_statspecs_string(directive_string):
     Process a statspecs string, yaml format.
     """
     directive = yaml.load(directive_string)
-    process_statspecs(directive)
+    return process_statspecs(directive)
 
 
 def process_statspecs_file(filepath):
@@ -266,5 +272,11 @@ def process_statspecs_file(filepath):
     """
     with open(filepath) as fd:
         directive = yaml.load(fd)
-    process_statspecs(directive)
+    return process_statspecs(directive)
 
+def savestats(stats, filepath):
+    """ save stats to filepath """
+    try:
+        yaml.dump(stats, open(filepath, 'wb'))
+    except IOError as e:
+        print "IOError while saving stats to file: ", filepath, " : ", e

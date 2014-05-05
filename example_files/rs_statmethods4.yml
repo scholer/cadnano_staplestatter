@@ -1,0 +1,33 @@
+# See USAGE.txt for info
+statspecs:
+- scoremethod: maxlength
+  scoremethod_kwargs: {}
+  plotspec:
+    plot_kwargs: {hold: true, color: auto, xoffset: auto}
+    label_fmt : "{designname}"
+    xlabel_fmt : "{scoremethod}"
+    title : false
+    subplot: 211
+  printspec: { highest : 5, threshold : 1, printstats: true, printtofile : false, hightolow : true }
+- scoremethod: valleyscore
+  scoremethod_kwargs: {margin: 0}
+  plotspec:
+    plot_kwargs: {hold: true, color: auto, xoffset: auto}
+    label_fmt : "{designname}"
+    xlabel_fmt : "{scoremethod}"
+    title : false
+    subplot: 223
+  printspec: { highest : 5, threshold : 1, printstats: true, printtofile : false, hightolow : true }
+- scoremethod: globalmaxcount
+  scoremethod_kwargs: {margin: 0}
+  plotspec:
+    plot_kwargs: {hold: true, color: auto, xoffset: auto, ylabel: false}
+    label_fmt : "{designname}"
+    xlabel_fmt : "{scoremethod}"
+    title : false
+    subplot: 224
+  printspec: { highest : 5, threshold : 2, printstats: true, printtofile : false, hightolow : true }
+figure:
+  newfigure: false
+  figure_kwargs: {figsize : [4, 6]}
+  title: false

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>391</width>
-    <height>471</height>
+    <width>475</width>
+    <height>496</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,6 +25,13 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
+        <widget class="QPushButton" name="processButton">
+         <property name="text">
+          <string>Process and plot!</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Use the next tab to specify processing methods, then press 'Process'.</string>
@@ -38,58 +45,37 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>Options:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="processButton">
-         <property name="text">
-          <string>Process and plot!</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Save plot to file:</string>
+          <string>Save plot or stats/scores to file:</string>
          </property>
         </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <widget class="QLineEdit" name="plotsfileLineEdit"/>
-         </item>
-         <item>
           <widget class="QPushButton" name="browsePlotfileButton">
            <property name="text">
-            <string>Browse...</string>
+            <string>Save plot to file...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="browseStatsfileButton">
+           <property name="text">
+            <string>Save stats to file...</string>
            </property>
           </widget>
          </item>
         </layout>
        </item>
        <item>
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Save stats data to file:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QLineEdit" name="statsfileLineEdit"/>
+          <widget class="QLineEdit" name="plotsfileLineEdit"/>
          </item>
          <item>
-          <widget class="QPushButton" name="browseStatsfileButton">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="statsfileLineEdit"/>
          </item>
         </layout>
        </item>
@@ -115,19 +101,43 @@
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
         <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="spacing">
+          <number>2</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="processButton2">
+           <property name="text">
+            <string>Process and plot!</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QPushButton" name="loadSpecFileButton">
+            <widget class="QPushButton" name="newSpecfileButton">
              <property name="text">
-              <string>Load spec from file</string>
+              <string>New...</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="saveSpecFileButton">
+            <widget class="QPushButton" name="loadSpecfileButton">
              <property name="text">
-              <string>Save this spec to file!</string>
+              <string>Load...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="saveSpecfileAsButton">
+             <property name="text">
+              <string>Save As...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="saveSpecfileButton">
+             <property name="text">
+              <string>Save!</string>
              </property>
             </widget>
            </item>
@@ -143,14 +153,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="specFilepathLineEdit"/>
-           </item>
-           <item>
-            <widget class="QPushButton" name="browseSpecFileButton">
-             <property name="text">
-              <string>Browse...</string>
-             </property>
-            </widget>
+            <widget class="QLineEdit" name="specfilepathLineEdit"/>
            </item>
           </layout>
          </item>
@@ -183,8 +186,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>349</width>
-            <height>400</height>
+            <width>433</width>
+            <height>425</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_6">
