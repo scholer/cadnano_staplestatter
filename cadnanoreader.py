@@ -117,13 +117,19 @@ def getstrandhybridizationlengths(strand):
     """
     #return strand.totalLength()    # too simple, does not account for ss or hybridized regions...
     hyb_stretches = list()
-    compSS = strand.strandSet().complementStrandSet()
-    for cStrand in compSS._findOverlappingRanges(strand):
+    for cStrand in strand.strandSet().complementStrandSet()._findOverlappingRanges(strand):
         sLowIdx, sHighIdx = strand.idxs()
         cLowIdx, cHighIdx = cStrand.idxs()
         lowIdx, highIdx = util.overlap(sLowIdx, sHighIdx, cLowIdx, cHighIdx)
         hyb_stretches.append(highIdx - lowIdx + 1)    # If an oligo starts at idx 30 and ends at idx 31, it is 2 nt long.
-    return hyb_stretches
+    # Note: The hyb stretches MUST BE SORTED. The strands in hybpattern are processed from 5p to 3p, so
+    # the hyb_stretches within each strand must also come in order 5p to 3p.
+    # _findOverlappingRanges() yields strands in the same order as strandSet._strandList,
+    # i.e. from low index to high (left to right in pathview).
+    if strand.isDrawn5to3():
+        return hyb_stretches
+    else:
+        return hyb_stretches[::-1]
 
 
 def get_oligo_hyb_patterns(cadnanopart, stapleoligos=True, scaffoldoligos=False):
