@@ -155,7 +155,7 @@ class StaplestatterHandler(object):
 
     def load_defaults(self):
         uiDia = self.staplestatterDialog
-        filepath = os.path.join(os.path.dirname(__file__), "example_files", "rs_statmethods.yml")
+        filepath = os.path.join(os.path.dirname(__file__), "example_files", "rs_statmethods5.yml")
         self.loadSpecFromFile(filepath, rememberDir=False)
         #usageTextEdit
         filepath = os.path.join(os.path.dirname(__file__), "USAGE.txt")
@@ -192,8 +192,8 @@ class StaplestatterHandler(object):
         # You connect a signal to a function/slot.
         uiDia.processButton.clicked.connect(self.processDirectiveSlot)
         uiDia.processButton2.clicked.connect(self.processDirectiveSlot)
-        uiDia.browsePlotfileButton.clicked.connect(self.browsePlotfileSlot)
-        uiDia.browseStatsfileButton.clicked.connect(self.browseStatsfileSlot)
+        uiDia.browsePlotfileButton.clicked.connect(self.savePlotToFileSlot)
+        uiDia.browseStatsfileButton.clicked.connect(self.saveStatsToFileSlot)
         uiDia.newSpecfileButton.clicked.connect(self.newSpecfileSlot)
         uiDia.loadSpecfileButton.clicked.connect(self.loadSpecfileSlot)
         uiDia.saveSpecfileButton.clicked.connect(self.saveSpecfileSlot)
@@ -221,16 +221,19 @@ class StaplestatterHandler(object):
         directive = self.getDirectiveStr()
         self._lastResult = staplestatter.process_statspecs_string(directive)
 
-    def browsePlotfileSlot(self):
+    def savePlotToFileSlot(self):
         """
         savefig(fname, dpi=None, facecolor='w', edgecolor='w', orientation='portrait', papertype=None, format=None,
         transparent=False, bbox_inches=None, pad_inches=0.1)
         """
-        print "browsePlotfileSlot() invoked by pressing browsePlotfileButton."
+        print "savePlotToFileSlot() invoked by pressing browsePlotfileButton."
         cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save plot as file...",
                                                    filefilter= "Graphics file (*.png *.jpg *.pdf)", directory=directory)
+        if not filepath:
+            print "Filepath is: '%s' - not saving..." % (filepath, )
+            return
         self.staplestatterDialog.plotsfileLineEdit.setText(filepath)
         if self._lastResult:
             self._lastResult['figure'].savefig(filepath)
@@ -238,11 +241,14 @@ class StaplestatterHandler(object):
             print "No stats yet: self._lastResult: ", self._lastResult
 
 
-    def browseStatsfileSlot(self):
-        print "browseStatsfileSlot() invoked by pressing browseStatsfileButton."
+    def saveStatsToFileSlot(self):
+        print "saveStatsToFileSlot() invoked by pressing browseStatsfileButton."
         cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save stats as file...", directory=directory)
+        if not filepath:
+            print "Filepath is: '%s' - not saving..." % (filepath, )
+            return
         self.staplestatterDialog.statsfileLineEdit.setText(filepath)
         if self._lastResult:
             staplestatter.savestats(self._lastResult['scores'], filepath)
@@ -253,12 +259,18 @@ class StaplestatterHandler(object):
     def newSpecfileSlot(self):
         print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
         filepath = self.browseForNewOrExistingFile()
+        if not filepath:
+            print "Filepath is: '%s' - not creating new..." % (filepath, )
+            return
         self.setSpecfilepath(filepath)
         self.setDirectiveStr("")
 
     def loadSpecfileSlot(self):
         print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
         filepath = self.browseForExistingFile()
+        if not filepath:
+            print "Filepath is: '%s' - not loading..." % (filepath, )
+            return
         self.loadSpecFromFile(filepath)
 
     def saveSpecfileSlot(self):
@@ -268,6 +280,9 @@ class StaplestatterHandler(object):
     def saveSpecfileAsSlot(self):
         print "browseSpecfileSlot() invoked by pressing browseSpecfileButton."
         filepath = self.browseForNewOrExistingFile()
+        if not filepath:
+            print "Filepath is: '%s' - not saving..." % (filepath, )
+            return
         self.setSpecfilepath(filepath)
         self.saveSpecToFile()
 
@@ -300,6 +315,9 @@ class StaplestatterHandler(object):
                       filefilter= "YAML data structure (*.yml *.yaml)"):
         # QFileDialog.getOpenFileName(<parent>, <str title>, <str directory>, <str "Filter name (glob filters)")
         filepath = QFileDialog.getOpenFileName(self.staplestatterDialog, dialog_title, self._fileOpenPath, filefilter)
+        if isinstance(filepath, (tuple, list)):
+            filepath = filepath[0]  # PySide returns a two-tuple, where the 2nd item is the filter used.
+            print "Filepath: ", filepath
         return str(filepath)
 
     def browseForNewOrExistingFile(self, dialog_title="Open staplestatter directive",
@@ -309,6 +327,8 @@ class StaplestatterHandler(object):
             directory = self._fileOpenPath
         # QFileDialog.getOpenFileName(<parent>, <str title>, <str directory>, <str "Filter name (glob filters)")
         filepath = QFileDialog.getSaveFileName(self.staplestatterDialog, dialog_title, directory, filefilter)
+        if isinstance(filepath, (tuple, list)):
+            filepath = filepath[0]  # PySide returns a two-tuple, where the 2nd item is the filter used.
         return str(filepath)
 
 
