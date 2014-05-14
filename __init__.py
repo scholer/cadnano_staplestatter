@@ -37,7 +37,7 @@ try:
     import cadnano
     from cadnano_staplestatter import StaplestatterHandler
 except ImportError as e:
-    msg = "ImportError: %s - either the cadnano version is too old for this plugin, or you are running without cadnano. This will not be available as a plugin." % (e, )
+    msg = "\nImportError: %s - either the cadnano version is too old for this plugin, or you are running without cadnano. Staplestatter will not be available for cadnano as a plugin.\n" % (e, )
     print msg
 else:
     # If no ImportError:

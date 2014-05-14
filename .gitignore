@@ -4,6 +4,7 @@ __pycache__/
 
 # backup files:
 *~
+old_bak/
 
 # C extensions
 *.so
