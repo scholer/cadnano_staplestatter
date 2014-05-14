@@ -147,9 +147,9 @@ def get_oligo_hyb_patterns(cadnanopart, stapleoligos=True, scaffoldoligos=False)
     # simple approach:
     #hyb_patterns = {oligo.locString() : [strand.length() for strand in oligo.strand5p().generator3pStrand()]
     #                    for oligo in oligoset}
-    hyb_patterns = {oligo.locString() : [l for strand in oligo.strand5p().generator3pStrand()
-                                                for l in getstrandhybridizationlengths(strand)]
+    hyb_patterns = dict((oligo.locString(), [l for strand in oligo.strand5p().generator3pStrand()
+                                                for l in getstrandhybridizationlengths(strand)])
                         for oligo in oligoset
-                            if stapleoligos and oligo.isStaple() or scaffoldoligos and not oligo.isStaple()}
+                            if stapleoligos and oligo.isStaple() or scaffoldoligos and not oligo.isStaple())
 
     return hyb_patterns

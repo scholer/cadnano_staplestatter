@@ -93,7 +93,9 @@ def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None):
     if scoremethod_kwargs is None:
         scoremethod_kwargs = dict()
     oligo_hybridization_patterns = cadnanoreader.get_oligo_hyb_patterns(cadnano_part)
-    scores = {oligo_key : scoremethod(hyb_pattern, **scoremethod_kwargs) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
+    #scores = {oligo_key : scoremethod(hyb_pattern, **scoremethod_kwargs) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
+    # Dict comprehensions is not compatible with Maya2012's python2.6, so falling back to :
+    scores = dict((oligo_key, scoremethod(hyb_pattern, **scoremethod_kwargs)) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items())
     return scores
 
 
