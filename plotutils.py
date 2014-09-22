@@ -14,7 +14,7 @@
 ##
 ##    You should have received a copy of the GNU General Public License
 ##
-# pylintxx: disable-msg=C0103,C0301,C0302,R0201,R0902,R0904,R0913,W0142,W0201,W0221,W0402
+# pylint: disable-msg=C0103,C0301,C0302,R0201,R0902,R0904,R0913,W0142,W0201,W0221,W0402
 
 """
 
@@ -130,6 +130,7 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
 
     # Auto-adjust color:
     if kwargs.get('color') == 'auto':
+        autocolors = autocolors*10 # Make sure we have sufficient and don't run into IndexErrors
         kwargs['color'] = autocolors[len(ax.collections)]
         print "color auto adjusted to: ", kwargs['color']
     else:

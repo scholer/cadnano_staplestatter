@@ -22,7 +22,11 @@
 #
 # http://www.opensource.org/licenses/mit-license.php
 """
+Main plugin module with StaplestatterHandler class.
 
+This module and StaplestatterHandler connects the generic
+data processing/plotting logic of staplestatter.py
+with the cadnano data extraction logic in cadnanoreader.py
 
 Updating the mainwindow's statusbar:
     self.win.statusBar().showMessage(statusString)
@@ -66,6 +70,10 @@ import staplestatter
 
 
 class StaplestatterHandler(object):
+    """
+    Main plugin object, takes care of showing GUI widget/window
+    and connecting events/slots.
+    """
     def __init__(self, document, window):
         self.doc, self.win = document, window
         # d().controller().window()
@@ -97,19 +105,20 @@ class StaplestatterHandler(object):
         Currenly this just loads the path of the last opened file, which is stored as self._fileOpenPath
         """
         self.settings.beginGroup("Staplestatter")
-        self._fileOpenPath = self.settings.value("openpath", None)
+        self._fileOpenPath = self.settings.value("openpath", None)  # QVariant for PyQt4
         try:
             self._fileOpenPath = self._fileOpenPath.toString()
         except AttributeError:
-            pass
+            print "self._fileOpenPath is:", self._fileOpenPath
         self.settings.endGroup()
+        # If there is not a separate "Staplestatter" settings group, use cadnano's "FileSystem" group.
         if not self._fileOpenPath:
             self.settings.beginGroup("FileSystem")
             self._fileOpenPath = self.settings.value("openpath", None)
             try:
-                self._fileOpenPath.toString()
+                self._fileOpenPath = self._fileOpenPath.toString()
             except AttributeError:
-                pass
+                print "self._fileOpenPath is:", self._fileOpenPath
             self.settings.endGroup()
 
     def _writeFileOpenPath(self, path):
@@ -123,9 +132,11 @@ class StaplestatterHandler(object):
 
 
     def document(self):
+        """ Returns the main document. """
         return cadnano.app().d
 
     def getDirectiveStr(self, ):
+        """ Returns content of the specfile text input field as plain text. """
         # toPlainText --> returns specfileTextEdit.plainText property.
         return str(self.staplestatterDialog.specfileTextEdit.toPlainText()) # Should always work...
         #try:
@@ -136,6 +147,7 @@ class StaplestatterHandler(object):
         #return directivestr
 
     def setDirectiveStr(self, directive):
+        """ Sets the content of the specfile text input field. """
         # toPlainText --> returns specfileTextEdit.plainText property.
         self.staplestatterDialog.specfileTextEdit.setPlainText(directive) # should work for plain python strings as well as QStrings.
         #directive = QString(directive)  # Should be ok with pyside, uses QString = str.
@@ -154,6 +166,7 @@ class StaplestatterHandler(object):
 
 
     def load_defaults(self):
+        """ Load default settings using hard-wired directive file in example_files. """
         uiDia = self.staplestatterDialog
         filepath = os.path.join(os.path.dirname(__file__), "example_files", "rs_statmethods5.yml")
         self.loadSpecFromFile(filepath, rememberDir=False)
@@ -227,10 +240,10 @@ class StaplestatterHandler(object):
         transparent=False, bbox_inches=None, pad_inches=0.1)
         """
         print "savePlotToFileSlot() invoked by pressing browsePlotfileButton."
-        cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
+        cur = str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save plot as file...",
-                                                   filefilter= "Graphics file (*.png *.jpg *.pdf)", directory=directory)
+                                                   filefilter="Graphics file (*.png *.jpg *.pdf)", directory=directory)
         if not filepath:
             print "Filepath is: '%s' - not saving..." % (filepath, )
             return
@@ -242,6 +255,7 @@ class StaplestatterHandler(object):
 
 
     def saveStatsToFileSlot(self):
+        """ Qt event slot, saves stats to file. """
         print "saveStatsToFileSlot() invoked by pressing browseStatsfileButton."
         cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
@@ -257,6 +271,7 @@ class StaplestatterHandler(object):
 
 
     def newSpecfileSlot(self):
+        """ Qt event slot, creates new specfile. """
         print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
         filepath = self.browseForNewOrExistingFile()
         if not filepath:
@@ -266,6 +281,7 @@ class StaplestatterHandler(object):
         self.setDirectiveStr("")
 
     def loadSpecfileSlot(self):
+        """ Qt event slot, loads a specfile. """
         print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
         filepath = self.browseForExistingFile()
         if not filepath:
@@ -274,10 +290,14 @@ class StaplestatterHandler(object):
         self.loadSpecFromFile(filepath)
 
     def saveSpecfileSlot(self):
+        """ Qt event slot, saves content of spec text input to specfile. """
         print "saveSpecfileSlot() invoked by pressing saveSpecfileButton."
         self.saveSpecToFile()
 
     def saveSpecfileAsSlot(self):
+        """
+        Qt event slot, prompts for file with browser and saves content of spec text input to specified file.
+        """
         print "browseSpecfileSlot() invoked by pressing browseSpecfileButton."
         filepath = self.browseForNewOrExistingFile()
         if not filepath:
@@ -312,7 +332,8 @@ class StaplestatterHandler(object):
 
 
     def browseForExistingFile(self, dialog_title="Open staplestatter directive",
-                      filefilter= "YAML data structure (*.yml *.yaml)"):
+                      filefilter="YAML data structure (*.yml *.yaml)"):
+        """ Opens Qt file dialog and lets the user select an existing file. """
         # QFileDialog.getOpenFileName(<parent>, <str title>, <str directory>, <str "Filter name (glob filters)")
         filepath = QFileDialog.getOpenFileName(self.staplestatterDialog, dialog_title, self._fileOpenPath, filefilter)
         if isinstance(filepath, (tuple, list)):
@@ -323,8 +344,15 @@ class StaplestatterHandler(object):
     def browseForNewOrExistingFile(self, dialog_title="Open staplestatter directive",
                       filefilter= "YAML data structure (*.yml *.yaml)",
                       directory=None):
+        """ Opens Qt file dialog and lets the user select a new or existing file. """
         if directory is None:
             directory = self._fileOpenPath
+            print "self._fileOpenPath is:", self._fileOpenPath
+        print "directory is:", directory
+        try:
+            directory = directory.toString() # In case it is a QVariant for some reason...
+        except AttributeError:
+            pass
         # QFileDialog.getOpenFileName(<parent>, <str title>, <str directory>, <str "Filter name (glob filters)")
         filepath = QFileDialog.getSaveFileName(self.staplestatterDialog, dialog_title, directory, filefilter)
         if isinstance(filepath, (tuple, list)):
@@ -335,6 +363,10 @@ class StaplestatterHandler(object):
 
 
 class StaplestatterDialog(QDialog, Ui_Dialog):
+    """
+    Staplestatter dialog window/widget.
+    Combines QDialog with the generated Ui_Dialog (created from .ui file).
+    """
     def __init__(self, parent, handler):
         QDialog.__init__(self, parent, Qt.Sheet)
         self.setupUi(self)
@@ -345,10 +377,13 @@ class StaplestatterDialog(QDialog, Ui_Dialog):
 
 
     def keyPressEvent(self, e):
+        """Not sure what this does?"""
         return QDialog.keyPressEvent(self, e)
 
     def closeDialog(self):
+        """Closes the dialog window."""
         self.close()
 
     def accept(self):
+        """ Does nothing. """
         pass

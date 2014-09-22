@@ -1,4 +1,7 @@
 # See USAGE.txt for info
+# Regarding scoremethod_kwargs: {margin: 0}
+# 'margin' is currently only keyword argument.
+# This is set at a per-plot level. It is not used by all scoring methods.
 statspecs:
 - scoremethod: maxlength
   scoremethod_kwargs: {}
@@ -19,7 +22,7 @@ statspecs:
     label_fmt : "{designname}"
     xlabel_fmt : "{scoremethod}"
     xlim : [-0.1, 5.1]
-    ylim : [0, 240]
+    ylim : [0, 250]
     title : false
     subplot: 223
   printspec: { highest : 5, threshold : 1, printstats: true, printtofile : false, hightolow : true }
@@ -30,7 +33,7 @@ statspecs:
     label_fmt : "{designname}"
     xlabel_fmt : "{scoremethod}"
     xlim : [-0.1, 5.1]
-    ylim : [0, 225]
+    ylim : [0, 250]
     title : false
     subplot: 224
   printspec: { highest : 5, threshold : 2, printstats: true, printtofile : false, hightolow : true }
