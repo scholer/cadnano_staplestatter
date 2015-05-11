@@ -15,7 +15,7 @@ matplotlib_demos/
 # Distribution / packaging
 .Python
 env/
-bin/
+# bin/
 build/
 develop-eggs/
 dist/
