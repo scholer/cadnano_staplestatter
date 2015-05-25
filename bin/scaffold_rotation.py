@@ -39,7 +39,7 @@ import sys
 import glob
 import argparse
 import json
-from time import clock
+import time
 import yaml
 from operator import itemgetter
 #import math
@@ -61,7 +61,6 @@ from matplotlib import pyplot #, gridspec
 
 # pylint: disable=C0103
 
-import time
 if sys.platform == 'win32':
     # On Windows, the best timer is time.clock
     timer = time.clock
@@ -70,7 +69,9 @@ else:
     timer = time.time
 
 # If you don't already have this on your path:
-sys.path.insert(0, "c:/Users/scholer/dev/src-repos/cadnano/staplestatter")
+BINDIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.dirname(BINDIR)) # Staplestatter library
+# Cadnano library:
 sys.path.insert(0, os.path.normpath(r"C:\Users\scholer\Dev\src-repos\cadnano\cadnano2.5"))
 
 
@@ -91,6 +92,7 @@ VERBOSE = 0
 
 
 def load_cadnano_file(filename, doc=None):
+    """ Loads a cadnano file into a cadnano document which is returned. """
     if doc is None:
         doc = Document()
     with open(filename) as fp:
@@ -102,17 +104,15 @@ def load_cadnano_file(filename, doc=None):
 
 def parse_args(argv=None):
     """
-    # grep implements
-    #-E, --extended-regexp     PATTERN is an extended regular expression
-    #-F, --fixed-strings       PATTERN is a set of newline-separated strings
-    #-G, --basic-regexp        PATTERN is a basic regular expression
-    #-e, --regexp=PATTERN      use PATTERN as a regular expression
-
+    Parse command line arguments.
     """
 
     parser = argparse.ArgumentParser(description="Cadnano apply sequence script.")
     parser.add_argument("--verbose", "-v", action="count", help="Increase verbosity.")
-    # NOTE: Windows does not support wildcard expansion in the default command line prompt!
+    parser.add_argument("--profile", "-p", action="store_true", help="Profile app execution.")
+    parser.add_argument("--print-profile", "-P", action="store_true", help="Print profiling statistics.")
+    parser.add_argument("--profile-outputfn", default="scaffold_rotation.profile",
+                        help="Save profiling statistics to this file.")
 
     #parser.add_argument("--seqfile", "-s", nargs=1, required=True, help="File containing the sequences")
     parser.add_argument("seqfile", help="File containing the sequences")
@@ -151,6 +151,7 @@ def parse_args(argv=None):
                         "If a file is given, it should contain a list of criteria provided in the same way "
                         "as the criteria in a sequence file (if yaml format).")
 
+    # NOTE: Windows does not support wildcard expansion in the default command line prompt!
     parser.add_argument("cadnano_files", nargs="+", metavar="cadnano_file",
                         help="One or more cadnano design files (.json) to apply sequence(s) to.")
 
@@ -163,28 +164,46 @@ def parse_args(argv=None):
     parser.add_argument("--show-plot", action="store_true",
                         help="Show the plot interactively. ")
 
-    parser.add_argument("--save-rotation-scores", default="{design}.scaffold-rotation.yaml",
+    parser.add_argument("--save-rotation-scores",
+                        #default="{design}.scaffold-rotation.yaml",
+                        default="{design}.scaffold-rotation.csv",
                         help="Save stats to this file. Can use the same named format parameters as --plot-filename. "
                         "The save format will depend on file extension, e.g. .yaml, .json, .tsv or .csv")
 
     parser.add_argument("--no-save-rotation-scores", dest="save_rotation_scores",
                         help="Do not save rotation scores to file.")
 
-
     return parser, parser.parse_args(argv)
 
 
-def process_args(argns=None):
-    """ Process command line args. """
+def process_args(argns=None, argv=None):
+    """
+    Process command line args.
+    If argns is given, this is used for processing.
+    If argns is not given (or None), parse_args() is called
+    in order to obtain a Namespace for the command line arguments.
+
+    Will expand the entry "cadnano_files" using glob matching, and print a
+    warning if a pattern does not match any files at all.
+
+    If argns (given or obtained) contains a "config" attribute,
+    this is interpreted as being the filename of a config file (in yaml format),
+    which is loaded and merged with the args.
+
+    Returns a dict.
+    """
     if argns is None:
-        _, argns = parse_args()
+        _, argns = parse_args(argv)
     args = argns.__dict__.copy()
     if args.get("config"):
         with open(args["config"]) as fp:
             cfg = yaml.load(fp)
         args.update(cfg)
     # On windows, we have to expand *.json manually:
-    args['cadnano_files'] = [fname for pattern in args['cadnano_files'] for fname in glob.glob(pattern)]
+    file_pattern_matches = [(pattern, glob.glob(pattern)) for pattern in args['cadnano_files']]
+    for pattern in (pattern for pattern, res in file_pattern_matches if len(res) == 0):
+        print("WARNING: File/pattern '%s' does not match any files." % pattern)
+    args['cadnano_files'] = [fname for pattern, res in file_pattern_matches for fname in res]
     return args
 
 def load_criteria_list(filepath):
@@ -240,7 +259,7 @@ def load_seq(args):
         if "txt" in ext:
             if args["simple_seq"]:
                 print("Returning simple sequence rather than seq_spec.")
-                return fd.read()
+                return fd.read().strip()
             # Treat the file as a simple txt file
             seq = next(line for line in (l.strip() for l in fd) if line and line[0] != "#")
             seq = "".join(b for b in seq.upper() if b in "ATGCU")
@@ -278,7 +297,7 @@ def save_stats(stats, filename):
                 sep = "\t"
             else:
                 sep = ","
-            fp.write("\n".join(sep.join(row) for row in stats))
+            fp.write("\n".join(sep.join(map(str, row)) for row in stats))
 
 
 def get_part(doc):
@@ -425,7 +444,7 @@ def print_oligo_criteria_match_report(oligos, criteria, desc=None):
         print("\n".join(" - {}".format(oligo) for oligo in oligos))
 
 
-def apply_sequences(part, seqs, offset=None):
+def apply_sequences(part, seqs, offset=None, verbose=0):
     """
     Apply sequences in seqs to oligos in part.
     If seqs is just a str, it is assumed to be a single sequence to be applied
@@ -441,18 +460,23 @@ def apply_sequences(part, seqs, offset=None):
         # Perform simple sequence application using just a single sequence with no selection criteria.
         # Can be used if the design has one and only one scaffold.
         seq = seqs
+        L = len(seq)
         if offset:
             seq_offset = offset
-            L = len(seq)
             seq = (seq*3)[L+seq_offset:L*2+seq_offset]
         oligos = part.oligos()
         # Get the first scaffold oligo:
-        scaf_oligo = next(oligo for oligo in oligos if not oligo.isStaple())
+        scaf_oligo = next(oligo for oligo in oligos if not oligo.isStaple() if oligo.length() > L/2)
+        if verbose:
+            print(" - Applying {} nt sequence to oligo of length {}"
+                  .format(L, scaf_oligo.length()))
         scaf_oligo.applySequence(seq, use_undostack=False)
     else:
         # Apply sequences based on seq_spec criteria:
         for seq_i, seq_spec in enumerate(seqs):
             # seq_spec has key "seq" and optional keys "criteria", and "offset".
+            # If seq_spec has an offset specified, this is always used.
+            # Specifying offset=0 can be used to fix mini-scafs so they are not rotated with the main scaffold.
             seq = seq_spec["seq"]
             L = len(seq)
             seq_offset = seq_spec.get("offset", offset)
@@ -472,12 +496,12 @@ def score_part(part, method="TM", **method_kwargs):
     Mg=10
     """
     #oligos = part.oligos()
-    hyb_pats = cadnanoreader.get_oligo_hyb_pattern(part, method=method, **method_kwargs)
+    # hyb_pats = cadnanoreader.get_oligo_hyb_pattern(part, method=method, **method_kwargs)
     #scores = staplestatter.score_part_oligos(part, scoremethod=getattr(statutils, 'maxlength'))
     #score_freqs = statutils.frequencies(scores)
     #staplestatter.plot_frequencies(score_freqs)
     #oligo_hybridization_TMs = cadnanoreader.get_oligo_hyb_pattern(cadnano_part, method="TM", **tm_kwargs)
-    T_arrays = hyb_pats.values()
+    # T_arrays = hyb_pats.values()
     # valley_stretches returns a binary: A stretch is either a valley or not.
     #valley_stretches = [statutils.valleyfinder(T_array) for T_array in T_arrays]
     # valleydepths returns negative values for valleys and 0 for non-valleys.
@@ -513,7 +537,7 @@ def get_offset_rotation_scores(part, seqs, offsetrange=None):
         if VERBOSE and (offset % 100) == 0:
             print("Applying sequence for offset {}".format(offset))
         start = timer()
-        apply_sequences(part, seqs, offset)
+        apply_sequences(part, seqs, offset, verbose=int(offset % 100 == 0))
         timings[0] += timer() - start
         if VERBOSE and offset % 100 == 0:
             print("Calculating score for offset {}".format(offset))
@@ -523,7 +547,7 @@ def get_offset_rotation_scores(part, seqs, offsetrange=None):
         #scores.append((offset, staplestatter.score_part_v1(part, hyb_method="length")))
         timings[1] += timer() - start
         if VERBOSE and offset % 100 == 0:
-            print("Calculation done for offset {}".format(offset))
+            print("Calculation  done for offset {}".format(offset))
     if VERBOSE:
         print("get_offset_rotation_scores timings:")
         print("- apply_sequences: {:.03f} s".format(timings[0]))
@@ -637,9 +661,9 @@ def get_score_criteria_list(args):
 
 
 
-def main(argv=None):
+
+def calculate_rotation_scores(args):
     global VERBOSE
-    args = process_args(argv)
     VERBOSE = args['verbose'] or 0
 
     # Get sequence(s):
@@ -650,8 +674,11 @@ def main(argv=None):
         print("score criteria list:")
         print(yaml.dump(score_criteria_list))
 
+    if VERBOSE > 2:
+        print("Command line args:", args)
 
     for cadnano_file in args["cadnano_files"]:
+        print("\nCalculating rotation score for cadnano file", cadnano_file)
         # folder = os.path.realpath(os.path.dirname(cadnano_file))
         # "141105_longer_catenane_BsoBI-frag_offset6nt.json"
         design = os.path.splitext(os.path.basename(cadnano_file))[0]
@@ -662,33 +689,51 @@ def main(argv=None):
         if stats_outputfn:
             stats_outputfn = stats_outputfn.format(design=design, cadnano_file=cadnano_file,
                                                    seqfile=args["seqfile"])
-        print("\nLoading design:", design)
+        print(" - Loading design:", design)
         doc = load_cadnano_file(cadnano_file)
         print(cadnano_file, "loaded!")
         part = get_part(doc)
         #apply_sequences(part, seqs, offset=args.get("offset")) # global offset
         #score_oligos(part, plot_filepath=plot_outputfn, criteria_list=score_criteria_list)
-        print("Calculating rotation scores...")
+        print(" - Calculating rotation scores...")
         rotationscores = get_offset_rotation_scores(part, seqs, args['offsetrange'])
-        x, y = zip(*rotationscores)
-        print("Rotation scores: N={}, first={}, min={}, max={}"
+        _, y = zip(*rotationscores)
+        print(" - Rotation scores: N={}, first={}, min={}, max={}"
               .format(len(y), rotationscores[0], min(y), max(y)))
         if stats_outputfn:
             if not ok_to_write_to_file(plot_outputfn, args):
-                print("Not  file", cadnano_file)
+                print(" - NOT overwriting existing file", stats_outputfn)
             else:
-                print("Saving rotation scores...")
+                print(" - Saving rotation scores...")
                 save_stats(rotationscores, stats_outputfn)
         if plot_outputfn:
             if not ok_to_write_to_file(plot_outputfn, args):
-                print("Aborting staple file write for file", cadnano_file)
+                print(" - Aborting staple file write for file", plot_outputfn)
             else:
-                print("Plotting rotation scores...")
+                print(" - Plotting rotation scores...")
                 plot_rotationscores(rotationscores, plot_outputfn)
         if args['show_plot']:
-            print("Showing plot...")
+            print(" - Showing plot...")
             pyplot.show()
+        print(" - Done!")
 
+
+def main(argv=None):
+    args = process_args(None, argv)     # argns, argv
+    if args['profile']:
+        import cProfile
+        cProfile.runctx('calculate_rotation_scores(args)', globals(), locals(), filename=args['profile_outputfn'])
+    if args['print_profile']:
+        print("\n\n=========== Profile statistics ===========\n")
+        from pstats import Stats
+        s = Stats(args['profile_outputfn'])
+        print("Cumulative Time Top 20:")
+        s.sort_stats('cumulative').print_stats(20)
+        print("\nInternal Time Top 40:")
+        s.sort_stats('time').print_stats(40)
+        return
+
+    calculate_rotation_scores(args)
 
 
 
