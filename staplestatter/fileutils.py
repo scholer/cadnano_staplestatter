@@ -14,8 +14,9 @@
 ##
 ##    You should have received a copy of the GNU General Public License
 ##
-# pylintxx: disable-msg=C0103,C0301,C0302,R0201,R0902,R0904,R0913,W0142,W0201,W0221,W0402
 
+# pylintxx: disable-msg=C0103,C0301,C0302,R0201,R0902,R0904,R0913,W0142,W0201,W0221,W0402
+# pylint: disable-msg=C0103
 
 """
 
@@ -26,26 +27,47 @@ You have to make sure that cadnano is importable before loading/importing/runnin
 """
 
 from __future__ import absolute_import, print_function
+import os
 import json
+import yaml
 
 from cadnano.document import Document
 from cadnano.fileio.nnodecode import decodeFile, decode
 
 
-def load_doc_from_file(filename):
+def load_doc_from_file(filename, doc=None):
     """
     Load cadnano json file by filename and return a cadnano Document.
     Usually the doc is not of much use; rather, use the part object:
         part = doc.children()[0]   # or doc.parts() if using an earlier cadnano2.5 commit
     """
-    with open(filename) as fd:
-        nno_dict = json.load(fd)
-    doc = Document()
+    if doc is None:
+        doc = Document()
+    with open(filename) as fp:
+        nno_dict = json.load(fp)
     decode(doc, nno_dict)
     return doc
 
 
-def apply_sequence(part, sequence):
-    """ Reminder on how to apply a sequence. """
-    scaf_oligo = next(oligo for oligo in part.oligos() if not oligo.isStaple())
-    scaf_oligo.applySequence(sequence, use_undostack=Fales)
+def load_json_or_yaml(filepath, ext=None):
+    """ Load """
+    if ext is None:
+        try:
+            ext = os.path.splitext(filepath)[1]
+        except IndexError:
+            ext = "yaml"
+    with open(filepath) as fd:
+        data = json.load(fd) if "json" in ext else yaml.load(fd)
+    return data
+
+
+def ok_to_write_to_file(filename, overwrite):
+    """ Assert whether it is OK to write to staples_outputfn """
+    if overwrite or not os.path.exists(filename):
+        return True
+    # os.path.exists(staples_outputfn) is True
+    overwrite = input(filename + " already exists. Overwrite? [Y/n]")
+    if overwrite and overwrite.lower()[0] == "n":
+        return False
+    return True
+

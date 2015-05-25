@@ -91,19 +91,25 @@ from __future__ import absolute_import, print_function
 import logging
 logger = logging.getLogger(__name__)
 # Note: Use pytest-capturelog to capture and display logging messages during pytest
-
 import inspect
 try:
     from Bio.SeqUtils.MeltingTemp import Tm_NN
 except ImportError:
     print("Could not import from Bio.SeqUtils.MeltingTemp - Tm calculations will not be available!")
 
+# Cadnano imports:
+from cadnano.part.part import Part
+
+# Local imports:
 try:
     from .cadnanolib import util
 except SystemError:
+    # Python 2
     from cadnanolib import util
 
 # CADNANO_PATH environment variable is set so that the maya plugin works...
+
+VERBOSE = 0
 
 
 def ps(obj):
@@ -122,6 +128,32 @@ def get_part(doc):
     except AttributeError:
         parts = doc.children()
     return parts[0]
+
+
+
+def get_part_alt(doc):
+    """ Cadnano is currently a little flaky regarding how to get the part. This tries to mitigate that. """
+    try:
+        # New-style cadnano:
+        part = doc.selectedInstance()
+    except AttributeError:
+        # Old-style:
+        part = doc.selectedPart()
+    if VERBOSE > 1:
+        print("Part:", part)
+    if not isinstance(part, Part):
+        if hasattr(part, "parent"):
+            # part is actually just a cadnano.objectinstance.ObjectInstance
+            # we need the cadnano.part.squarepart.SquarePart which is ObjectInstance.parent
+            try:
+                part = part.parent()
+            except TypeError:
+                # There are also some issues with parent being a getter or not...
+                part = part.parent
+        else:
+            # Try something else
+            part = doc.children()[0]
+    return part
 
 
 
@@ -197,8 +229,15 @@ def getstrandhybridizationtm(strand, **kwargs):
     kwargs is passed on to the Tm calculating method (currently Bio.SeqUtils.MeltingTemp.Tm_NN)
     """
     #from Bio.SeqUtils.MeltingTemp import Tm_NN
-    hyb_seqs = getstrandhybridizationseqs(strand)
-    hyb_TMs = (Tm_NN(seq, **kwargs) for seq in hyb_seqs)
+    # Trim out empty strand hybridizations:
+    hyb_seqs = list(seq for seq in getstrandhybridizationseqs(strand) if seq.strip())
+    try:
+        hyb_TMs = [Tm_NN(seq, **kwargs) for seq in hyb_seqs]
+    except IndexError as e:
+        #print("IndexError:", e)
+        #print(" - for hyb_seqs:", hyb_seqs)
+        raise ValueError("hyb_seqs {} produced by strand {} part of oligo {} raised IndexError {}"
+                         .format(hyb_seqs, strand, strand.oligo(), e))
     return hyb_TMs
 
 
@@ -281,8 +320,10 @@ def get_oligo_hyb_pattern(cadnanopart, stapleoligos=True, scaffoldoligos=False, 
             method = getstrandhybridizationseqs
         else:
             method = getstrandhybridizationtm
+    # For a strand, getstrandhybridization_methods will return a list of
+    # values. This is because strand may not be hybridized to the same complementary strand all the way.
     hyb_patterns = {oligo.locString(): [val for strand in oligo.strand5p().generator3pStrand()
-                                        for val in method(strand, **kwargs)]
+                                        for val in method(strand, **kwargs) if val]
                     for oligo in oligoset
                     if stapleoligos and oligo.isStaple() or scaffoldoligos and not oligo.isStaple()}
     return hyb_patterns

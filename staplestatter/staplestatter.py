@@ -109,7 +109,8 @@ def score_part_v1(cadnano_part, hyb_method="TM", hyb_kwargs=None):
     # valley_stretches returns a binary: A stretch is either a valley or not.
     #valley_stretches = [statutils.valleyfinder(T_array) for T_array in T_arrays]
     # valleydepths returns negative values for valleys and 0 for non-valleys.
-    valleydepths = [statutils.valleydepth(T_array) for T_array in T_arrays]
+    # T_array can be empty if oligo does not hybridize on any (well-defined) sequence.
+    valleydepths = [statutils.valleydepth(T_array) for T_array in T_arrays if T_array]
 
     valleyscores = [-sum(math.sqrt(-valley) for valley in oligo_valleys) for oligo_valleys in valleydepths]
     valleyscore = sum(valleyscores)
@@ -150,7 +151,7 @@ def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printt
     If printstats=True, will print to stdout
     If printtofile is a filepath, will print to this filepath.
     """
-    score_name_tups = sorted(((score, name) for name, score in scores.items() if score>threshold), reverse=hightolow)
+    score_name_tups = sorted(((score, name) for name, score in scores.items() if score > threshold), reverse=hightolow)
     if highest and highest < len(score_name_tups):
         score_name_tups = score_name_tups[:highest]
     if printstats or printtofile:
@@ -223,7 +224,7 @@ def plotpartstats(part=None, designname=None, figsize=None, scoremethod_kwargs=N
                          title=titles[i],
                          label=designname[:10],
                          color=colors[i],
-                         )
+                        )
 
     return fig, allscores
 
