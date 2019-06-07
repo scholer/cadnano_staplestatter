@@ -51,17 +51,20 @@ logger = logging.getLogger(__name__)
 
 try:
     import matplotlib
+    from matplotlib.ticker import MaxNLocator
 except ImportError:
     print("matplotlib library not available, unable to plot.")
     matplotlib = None
     pyplot = None
 else:
     # backend must be selected *before* importing pyplot, pylab or matplotlib.backends
-    if not "qt" in matplotlib.get_backend().lower() \
-    and not "zmq" in matplotlib.get_backend().lower():
-        matplotlib.use('Qt5Agg') # Must always be called *before* importing pyplot
-    from matplotlib import pyplot
-    #matplotlib.use('Qt4Agg')    # 'agg' is just "anti-grain". Default is "Anti-Grain Geometry" C++ library.
+    # See `matplotlib.rcsetup.interactive_bk` for available interactive backends.
+    if not "qt" in matplotlib.get_backend().lower() and not "zmq" in matplotlib.get_backend().lower():
+        try:
+            import PyQt4
+            matplotlib.use('Qt4Agg')    # 'agg' is just "anti-grain". Default is "Anti-Grain Geometry" C++ library.
+        except ImportError:
+            matplotlib.use('Qt5Agg')  # Must always be called *before* importing pyplot
     # should be the same as setting
     # matplotlib.rcParams['backend'] = 'Qt4Agg'.
     # Also check:
@@ -74,8 +77,7 @@ else:
     # create before you draw and thus want to postpone rendering until display time.
     #matplotlib.interactive(True)    # will display things immediately.
 
-    from matplotlib import pyplot # provides some convenient plotting methods
-    plt = pyplot # alias...
+    from matplotlib import pyplot
 
 
 def plotscores_histogram(scores):
@@ -159,6 +161,8 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
     # PLOT:
     #lines = ax.vlines(values, [0], counts, **kwargs)  # lines can also be obtained from ax.collections list.
     print("Plotting vlines for %s on %s" % ((values, counts), ax))
+    # matplotlib no longer silently ignores unrecognized parameters, but will raise errors:
+    kwargs.pop('hold')
     lines = pyplot.vlines(values, [0], counts, axes=ax, **kwargs)  # lines can also be obtained from ax.collections list.
 
     # ADJUST THE PLOT:
@@ -168,6 +172,7 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
         xlim[0] = xlim_min
     ax.set_xlim(xlim)
     ax.set_ylim(0, max(counts)*1.1)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     if xlabel:
         ax.set_xlabel(xlabel)
     if ylabel:

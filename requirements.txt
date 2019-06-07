@@ -1,2 +1,3 @@
+# Maybe require matplotlib=2 ? Not sure if matplotlib 3+ works...
 matplotlib
 pyyaml

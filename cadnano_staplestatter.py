@@ -30,23 +30,36 @@ with the cadnano data extraction logic in cadnanoreader.py
 
 Updating the mainwindow's statusbar:
     self.win.statusBar().showMessage(statusString)
+
+
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 
 # Cadnano imports:
 import cadnano
-import util
+from cadnano import util
 
-util.qtWrapImport('QtGui', globals(), ['QIcon', 'QPixmap', 'QAction'])
-util.qtWrapImport('QtGui', globals(), ['QDialog', 'QKeySequence', 'QDialogButtonBox', 'QIntValidator', 'QFileDialog'])
-util.qtWrapImport('QtCore', globals(), ['Qt', 'QString', 'QSettings', 'QDir', 'QUrl'])
+try:
+    # Cadnano2-pyqt5 and Cadnano2.5-legacy:
+    from cadnano import util
+    from PyQt5.QtGui import QIcon, QPixmap
+    from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QAction
+    from PyQt5.QtCore import Qt, QSettings, QDir, QUrl
+except ImportError:
+    # Cadnano2:
+    import util
+    util.qtWrapImport('QtGui', globals(), ['QIcon', 'QPixmap', 'QAction'])
+    util.qtWrapImport('QtGui', globals(), ['QDialog', 'QDialogButtonBox', 'QFileDialog'])
+    util.qtWrapImport('QtCore', globals(), ['Qt', 'QString', 'QSettings', 'QDir', 'QUrl'])
+
 
 # Staplestatter imports:
-from .ui.staplestatter_ui import Ui_Dialog   # logic is handled by ui/__init__.py
+from .ui import StaplestatterUiDialog   # logic is handled by ui/__init__.py
 from .staplestatter import staplestatter
 from .staplestatter.staplestatter import process_statspecs_string, savestats
+from .staplestatter.cadnanoreader import get_part_alt, get_part
 
 
 
@@ -69,16 +82,23 @@ class StaplestatterHandler(object):
         self.menuaction.setToolTip("Use the navigator to quickly navigate around the cadnano views.")
         self.menuaction.setObjectName("actionStaplestatter")
         self.menuaction.triggered.connect(self.menuactionSlot)
-        self.win.menuPlugins.addAction(self.menuaction)
-        # add to main tool bar
-        self.win.topToolBar.insertAction(self.win.actionFiltersLabel, self.menuaction)
-        self.win.topToolBar.insertSeparator(self.win.actionFiltersLabel)
+        try:
+            # Cadnano2 API:
+            self.win.menuPlugins.addAction(self.menuaction)
+            # add to main tool bar
+            self.win.topToolBar.insertAction(self.win.actionFiltersLabel, self.menuaction)
+            self.win.topToolBar.insertSeparator(self.win.actionFiltersLabel)
+        except AttributeError:
+            # Cadnano2.5-legacy API:
+            self.win.menu_plugins.addAction(self.menuaction)  # Cadnano2.5-legacy
+            self.win.selection_toolbar.insertAction(self.win.action_filters_label, self.menuaction)
+            self.win.selection_toolbar.insertSeparator(self.win.action_filters_label)
+
         self.staplestatterDialog = None
         self.settings = QSettings()
         self._fileOpenPath = None
         self._readSettings()
         self._lastResult = None # dict(figure=fig, scores=allscores)
-        #self.use_animation = cadnano_api.ANIMATE_ENABLED_DEFAULT
 
     def _readSettings(self):
         """
@@ -90,7 +110,7 @@ class StaplestatterHandler(object):
         try:
             self._fileOpenPath = self._fileOpenPath.toString()
         except AttributeError:
-            print "self._fileOpenPath is:", self._fileOpenPath
+            print("self._fileOpenPath is:", self._fileOpenPath)
         self.settings.endGroup()
         # If there is not a separate "Staplestatter" settings group, use cadnano's "FileSystem" group.
         if not self._fileOpenPath:
@@ -99,7 +119,7 @@ class StaplestatterHandler(object):
             try:
                 self._fileOpenPath = self._fileOpenPath.toString()
             except AttributeError:
-                print "self._fileOpenPath is:", self._fileOpenPath
+                print("self._fileOpenPath is:", self._fileOpenPath)
             self.settings.endGroup()
 
     def _writeFileOpenPath(self, path):
@@ -153,30 +173,52 @@ class StaplestatterHandler(object):
         self.loadSpecFromFile(filepath, rememberDir=False)
         filepath = os.path.join(os.path.dirname(__file__), "USAGE.html")
         relpath = os.path.relpath(filepath, os.path.abspath(os.getcwd()))
-        print "filepath:", filepath
-        print "relpath:", relpath
+        print("filepath:", filepath)
+        print("relpath:", relpath)
         try:
             # TODO: Swap the 'usage' QPlainTextEdit widget with QTextBrowser and show HTML instead of plain-text.
             # uiDia.usageTextEdit.setPlainText(open(filepath).read())
             uiDia.usageTextEdit.setSource(QUrl(":"+relpath))
         except IOError:
-            print "Could not load USAGE file: ", filepath
+            print("Could not load USAGE file: ", filepath)
 
 
     def menuactionSlot(self):
         """Only show the dialog if staple strands exist."""
-        print "cadnano_staplestatter.StaplestatterHandler.menuactionSlot() invoked (DEBUG)"
-        part = self.doc.controller().activePart()
-        if part != None:  # is there a part?
-            for o in list(part.oligos()):
-                if o.isStaple():  # is there a staple oligo?
-                    if self.staplestatterDialog == None:
-                        self.staplestatterDialog = StaplestatterDialog(self.win, self)
-                        self.make_ui_connections()
-                        self.load_defaults()        # Only do this AFTER StaplestatterDialog has been created.
-                    self.staplestatterDialog.show()
-                    return
-        print "You should open a document before you use staplestatter."
+        print("cadnano_staplestatter.StaplestatterHandler.menuactionSlot() invoked (DEBUG)")
+        # part = self.doc.controller().activePart()
+        # cadnano2.5 is a little flaky about how to get document parts, so I've created a function to figure this out:
+        doc = self.doc
+        try:
+            print("doc.parts():", doc.parts())
+        except AttributeError:
+            print("doc.children():", doc.children())  # Works, [<SquarePart 1960>]
+        try:
+            print("doc.selectedInstance():", doc.selectedInstance())  # Works, cadnano.objectinstance.ObjectInstance
+        except AttributeError:
+            print("doc.selectedPart():", doc.selectedPart())
+
+        try:
+            part = get_part(self.doc)
+        except IndexError:
+            # This happens if no document/parts have been created or loaded:
+            print("You should open a document before you use staplestatter.")
+            return
+        print("Part:", part)
+        if part is None:
+            print("You should open a document before you use staplestatter.")
+        for o in list(part.oligos()):
+            print("Oligo:", o, "(staple)" if o.isStaple() else "(scaf)")
+            if o.isStaple():  # is there a staple oligo?
+                print("self.staplestatterDialog:", self.staplestatterDialog)
+                if self.staplestatterDialog == None:
+                    self.staplestatterDialog = StaplestatterDialog(self.win, self)
+                    self.make_ui_connections()
+                    self.load_defaults()        # Only do this AFTER StaplestatterDialog has been created.
+                print("self.staplestatterDialog:", self.staplestatterDialog)
+                print(" - invoking self.staplestatterDialog.show() ...")
+                self.staplestatterDialog.show()
+                return
 
 
     def make_ui_connections(self):
@@ -215,7 +257,7 @@ class StaplestatterHandler(object):
         Typically, a signal would be emitted by its parent, e.g. a button emits a clicked() signal
         when it is pressed.
         """
-        print "processDirectiveSlot() invoked by pressing processButton."
+        print("processDirectiveSlot() invoked by pressing processButton.")
         directive = self.getDirectiveStr()
         self._lastResult = staplestatter.process_statspecs_string(directive)
 
@@ -224,69 +266,69 @@ class StaplestatterHandler(object):
         savefig(fname, dpi=None, facecolor='w', edgecolor='w', orientation='portrait', papertype=None, format=None,
         transparent=False, bbox_inches=None, pad_inches=0.1)
         """
-        print "savePlotToFileSlot() invoked by pressing browsePlotfileButton."
+        print("savePlotToFileSlot() invoked by pressing browsePlotfileButton.")
         cur = str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save plot as file...",
                                                    filefilter="Graphics file (*.png *.jpg *.pdf)", directory=directory)
         if not filepath:
-            print "Filepath is: '%s' - not saving..." % (filepath, )
+            print("Filepath is: '%s' - not saving..." % (filepath, ))
             return
         self.staplestatterDialog.plotsfileLineEdit.setText(filepath)
         if self._lastResult:
             self._lastResult['figure'].savefig(filepath)
         else:
-            print "No stats yet: self._lastResult: ", self._lastResult
+            print("No stats yet: self._lastResult: ", self._lastResult)
 
 
     def saveStatsToFileSlot(self):
         """ Qt event slot, saves stats to file. """
-        print "saveStatsToFileSlot() invoked by pressing browseStatsfileButton."
+        print("saveStatsToFileSlot() invoked by pressing browseStatsfileButton.")
         cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save stats as file...", directory=directory)
         if not filepath:
-            print "Filepath is: '%s' - not saving..." % (filepath, )
+            print("Filepath is: '%s' - not saving..." % (filepath, ))
             return
         self.staplestatterDialog.statsfileLineEdit.setText(filepath)
         if self._lastResult:
             staplestatter.savestats(self._lastResult['scores'], filepath)
         else:
-            print "No stats yet: self._lastResult: ", self._lastResult
+            print("No stats yet: self._lastResult: ", self._lastResult)
 
 
     def newSpecfileSlot(self):
         """ Qt event slot, creates new specfile. """
-        print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
+        print("loadSpecfileSlot() invoked by pressing loadSpecfileButton.")
         filepath = self.browseForNewOrExistingFile()
         if not filepath:
-            print "Filepath is: '%s' - not creating new..." % (filepath, )
+            print("Filepath is: '%s' - not creating new..." % (filepath, ))
             return
         self.setSpecfilepath(filepath)
         self.setDirectiveStr("")
 
     def loadSpecfileSlot(self):
         """ Qt event slot, loads a specfile. """
-        print "loadSpecfileSlot() invoked by pressing loadSpecfileButton."
+        print("loadSpecfileSlot() invoked by pressing loadSpecfileButton.")
         filepath = self.browseForExistingFile()
         if not filepath:
-            print "Filepath is: '%s' - not loading..." % (filepath, )
+            print("Filepath is: '%s' - not loading..." % (filepath, ))
             return
         self.loadSpecFromFile(filepath)
 
     def saveSpecfileSlot(self):
         """ Qt event slot, saves content of spec text input to specfile. """
-        print "saveSpecfileSlot() invoked by pressing saveSpecfileButton."
+        print("saveSpecfileSlot() invoked by pressing saveSpecfileButton.")
         self.saveSpecToFile()
 
     def saveSpecfileAsSlot(self):
         """
         Qt event slot, prompts for file with browser and saves content of spec text input to specified file.
         """
-        print "browseSpecfileSlot() invoked by pressing browseSpecfileButton."
+        print("browseSpecfileSlot() invoked by pressing browseSpecfileButton.")
         filepath = self.browseForNewOrExistingFile()
         if not filepath:
-            print "Filepath is: '%s' - not saving..." % (filepath, )
+            print("Filepath is: '%s' - not saving..." % (filepath, ))
             return
         self.setSpecfilepath(filepath)
         self.saveSpecToFile()
@@ -298,7 +340,7 @@ class StaplestatterHandler(object):
         try:
             directivestr = open(filepath).read()
         except IOError:
-            print "Could not load spec file: ", filepath
+            print("Could not load spec file: ", filepath)
             return
         self.setDirectiveStr(directivestr)
         if rememberDir:
@@ -313,7 +355,7 @@ class StaplestatterHandler(object):
             with open(filepath, 'wb') as fd:
                 fd.write(directivestr)
         except IOError:
-            print "Could not save directive to spec file: ", filepath
+            print("Could not save directive to spec file: ", filepath)
 
 
     def browseForExistingFile(self, dialog_title="Open staplestatter directive",
@@ -323,7 +365,7 @@ class StaplestatterHandler(object):
         filepath = QFileDialog.getOpenFileName(self.staplestatterDialog, dialog_title, self._fileOpenPath, filefilter)
         if isinstance(filepath, (tuple, list)):
             filepath = filepath[0]  # PySide returns a two-tuple, where the 2nd item is the filter used.
-            print "Filepath: ", filepath
+            print("Filepath: ", filepath)
         return str(filepath)
 
     def browseForNewOrExistingFile(self, dialog_title="Open staplestatter directive",
@@ -332,8 +374,8 @@ class StaplestatterHandler(object):
         """ Opens Qt file dialog and lets the user select a new or existing file. """
         if directory is None:
             directory = self._fileOpenPath
-            print "self._fileOpenPath is:", self._fileOpenPath
-        print "directory is:", directory
+            print("self._fileOpenPath is:", self._fileOpenPath)
+        print("directory is:", directory)
         try:
             directory = directory.toString() # In case it is a QVariant for some reason...
         except AttributeError:
@@ -347,10 +389,10 @@ class StaplestatterHandler(object):
 
 
 
-class StaplestatterDialog(QDialog, Ui_Dialog):
+class StaplestatterDialog(QDialog, StaplestatterUiDialog):
     """
     Staplestatter dialog window/widget.
-    Combines QDialog with the generated Ui_Dialog (created from .ui file).
+    Combines QDialog with the generated StaplestatterUiDialog (created from .ui file).
     """
     def __init__(self, parent, handler):
         QDialog.__init__(self, parent, Qt.Sheet)

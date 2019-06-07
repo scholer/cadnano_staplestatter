@@ -1,0 +1,4 @@
+all: staplestatter_ui_pyqt5.py
+
+staplestatter_ui_pyqt5.py : staplestatter.ui
+	pyuic5 $< > $@

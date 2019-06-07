@@ -58,6 +58,7 @@ from . import statutils
 from . import cadnanoreader
 from . import plotutils
 from .plotutils import plot_frequencies
+from .cadnanoreader import get_part
 
 
 try:
@@ -81,7 +82,7 @@ except ImportError:
             @staticmethod
             def p():
                 """ Returns part object (model). """
-                return cadnano_api.d().selectedPart()
+                return get_part(cadnano_api.d())
 
 
 def score_part_v1(cadnano_part, hyb_method="TM", hyb_kwargs=None):
@@ -139,8 +140,16 @@ def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None, h
     print("oligo_hybridization_patterns:", oligo_hybridization_patterns)
     #scores = {oligo_key : scoremethod(hyb_pattern, **scoremethod_kwargs) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
     # Dict comprehensions is not compatible with Maya2012's python2.6, so falling back to :
-    scores = {oligo_key: scoremethod(hyb_pattern, **scoremethod_kwargs)
-              for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
+    # scores = {oligo_key: scoremethod(hyb_pattern, **scoremethod_kwargs)
+    #           for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
+    # Let us catch oligos with no sequence, where the scoremethod may give an error:
+    scores = {}
+    for oligo_key, hyb_pattern in oligo_hybridization_patterns.items():
+        try:
+            scores[oligo_key] = scoremethod(hyb_pattern, **scoremethod_kwargs)
+        except ValueError as e:
+            print("ValueError (%s) while scoring oligo %s using scoremethod '%s'" % (e, oligo_key, scoremethod),
+                  " - make sure a sequence has been applied!")
     return scores
 
 
@@ -285,13 +294,23 @@ def process_statspec(statspec, part=None, designname=None, fig=None, ax=None):
         part, scoremethod=scoremethod, scoremethod_kwargs=scoremethod_kwargs,
         hyb_method=statspec.get('hyb_method', 'length'), hyb_kwargs=statspec.get('hyb_kwargs', dict()))
     # Make frequencies:
+    if not scores:
+        print("process_statspec(): No oligos could be scored using scoremethod '%s' - aborting..." % (scoremethod,))
+        print("scores is:", scores)
+        return
+    print("Scored %s oligos using scoremethod '%s'" % (len(scores), scoremethod))
     scorefreqs = statutils.frequencies(scores, binning=int) if statspec.get('plot_frequencies', True) else None
+    print("%s different scores using scoremethod '%s'" % (len(scorefreqs), scoremethod))
     # TODO: Instead of using frequencies, use a generic `plot_type` parameter to change how the scores are plotted.
     # TODO: Rename `plot_statspec()` to `plot_scorefreqs`, and make another `plot_scores` that take a simple array
     #       rather than taking a binned histogram
     # Plot
     plotutils.plot_statspec(scorefreqs, plotspec, fig=fig, ax=ax)
     # Post-processing (?)
+
+    if 'printspec' in statspec:
+        print("Printing highest scores with: statspec['printspec']")
+        get_highest_scores(scores, **statspec['printspec'])  # This logic is subject to change.
 
     return scores
 
@@ -331,9 +350,6 @@ def process_statspecs(directive, part=None, designname=None):
     for _, statspec in enumerate(statspecs):
         scores = process_statspec(statspec, part=part, designname=designname, fig=fig)
         allscores.append(scores)
-        if 'printspec' in statspec:
-            print("Printing highest scores with: statspec['printspec']")
-            get_highest_scores(scores, **statspec['printspec']) # This logic is subject to change.
     return dict(figure=fig, scores=allscores)
 
 

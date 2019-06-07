@@ -49,7 +49,16 @@ else:
 
     # Initialization: Add handler for existing documents,
     # and make sure a handler is created for new documents in the future.
-    for c in cadnano.app().documentControllers:
+    try:
+        # Cadnano2:
+        doc_controllers = cadnano.app().documentControllers
+        print("Staplestatter: cadnano2 API recognized.")
+    except AttributeError:
+        # Cadnano2.5-legacy:
+        doc_controllers = cadnano.app().document_controllers
+        print("Staplestatter: cadnano2.5-legacy API recognized.")
+
+    for c in doc_controllers:
         doc, win = c.document(), c.window()
         doc.staplestatterHandler = StaplestatterHandler(doc, win) # Maybe this should just be set to the window?
     cadnano.app().documentWindowWasCreatedSignal.connect(documentWindowWasCreatedSlot)

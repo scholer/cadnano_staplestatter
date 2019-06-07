@@ -15,3 +15,10 @@ pandoc --from markdown_strict-smart -o USAGE.html USAGE.md
 
 
 
+## Python 2-to-3 conversion:
+
+```
+
+"C:\Program Files\Git\usr\bin\find.exe" . -name "*.py" -exec "futurize --stage1 mypackage/*.py {}" ;
+
+```
