@@ -123,7 +123,7 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
     subplotkey is provided to add_subplot if making subfigure, keys are (numrows, numcols, plotnum)
 
     """
-    print("xlabel: '%s'; kwargs: %s", (xlabel, kwargs))
+    print("xlabel: '%s'; kwargs: %s" % (xlabel, kwargs))
     if gridspec:
         ax = pyplot.subplot(gridspec)
     elif ax is None:
@@ -136,7 +136,7 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
 
     # Auto-adjust color:
     if kwargs.get('color') == 'auto':
-        autocolors = autocolors*10 # Make sure we have sufficient and don't run into IndexErrors
+        autocolors = autocolors*10  # Make sure we have sufficient and don't run into IndexErrors
         kwargs['color'] = autocolors[len(ax.collections)]
         print("color auto adjusted to: ", kwargs['color'])
     #else:

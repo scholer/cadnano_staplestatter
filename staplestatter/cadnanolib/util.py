@@ -241,7 +241,15 @@ def strToDna(seqStr):
     """Returns str having been reduced to capital ACTG."""
     return "".join([c for c in seqStr if c in 'ACGTacgt']).upper()
 
-complement = str.maketrans('ACGTacgt', 'TGCATGCA')
+try:
+    complement = str.maketrans('ACGTacgt', 'TGCATGCA')  # str.maketrans for python3.1+, string.maketrans for python 2.
+    whitetoQ = str.maketrans(' ', '?')
+except AttributeError:
+    # python 2:
+    import string
+    complement = string.maketrans('ACGTacgt', 'TGCATGCA')  # str.maketrans for python3.1+, string.maketrans for python 2.
+    whitetoQ = string.maketrans(' ', '?')
+
 def rcomp(seqStr):
     """Returns the reverse complement of the sequence in seqStr."""
     return seqStr.translate(complement)[::-1]
@@ -249,7 +257,6 @@ def comp(seqStr):
     """Returns the complement of the sequence in seqStr."""
     return seqStr.translate(complement)
 
-whitetoQ = str.maketrans(' ', '?')
 def markwhite(seqStr):
     return seqStr.translate(whitetoQ)
 

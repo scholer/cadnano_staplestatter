@@ -256,7 +256,11 @@ def frequencies(scores, binning=None):
         values = scores
     if binning:
         # how?
-        values = [int(score) for score in values]
+        if binning is True or binning is int:
+            values = [int(score) for score in values]
+        else:
+            # TODO: Consider using numpy.histogram(A, bins=...) for advanced binning.
+            raise ValueError("frequencies() with binning=%s - value not recognized." % (binning,))
     #scorefreq = sorted((value, values.count(value)) for value in set(values)) # Faster short lists with few unique values.
-    scorefreq = sorted(Counter(values).items()) # Faster for long list with many unique elements.
+    scorefreq = sorted(Counter(values).items())  # Faster for long list with many unique elements.
     return scorefreq

@@ -54,9 +54,9 @@ except ImportError:
     pyplot = None
 
 #from statutils import valleyscore, globalmaxcount, maxlength
-from staplestatter import statutils
-from staplestatter import cadnanoreader
-from staplestatter import plotutils
+from . import statutils
+from . import cadnanoreader
+from . import plotutils
 from .plotutils import plot_frequencies
 
 
@@ -98,6 +98,7 @@ def score_part_v1(cadnano_part, hyb_method="TM", hyb_kwargs=None):
     * Calculate per-method score, then combine this?
     * Calculate positive contributions and subtract negative? Or only have negative?
     """
+    print("\nscore_part_v1\n")
     if hyb_kwargs is None:
         hyb_kwargs = {'Mg': 10}
     oligo_hybridizations = cadnanoreader.get_oligo_hyb_pattern(cadnano_part, method=hyb_method, **hyb_kwargs)
@@ -121,7 +122,7 @@ def score_part_v1(cadnano_part, hyb_method="TM", hyb_kwargs=None):
 
 
 
-def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None, hyb_method="TM", hyb_kwargs=None):
+def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None, hyb_method="length", hyb_kwargs=None):
     """
     Evaluate part oligos.
     # This should be a (possibly ordered) dict, as:
@@ -133,7 +134,9 @@ def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None, h
         scoremethod = statutils.valleyscore
     if scoremethod_kwargs is None:
         scoremethod_kwargs = {}
+    print("scoremethod:", scoremethod)
     oligo_hybridization_patterns = cadnanoreader.get_oligo_hyb_pattern(cadnano_part, method=hyb_method, **hyb_kwargs)
+    print("oligo_hybridization_patterns:", oligo_hybridization_patterns)
     #scores = {oligo_key : scoremethod(hyb_pattern, **scoremethod_kwargs) for oligo_key, hyb_pattern in oligo_hybridization_patterns.items()}
     # Dict comprehensions is not compatible with Maya2012's python2.6, so falling back to :
     scores = {oligo_key: scoremethod(hyb_pattern, **scoremethod_kwargs)
@@ -177,6 +180,7 @@ def plotpartstats(part=None, designname=None, figsize=None, scoremethod_kwargs=N
     Invoke with e.g.
         f7, scoreaxes, allscores = plotpartstats(p())
     """
+    print("\nplotpartstats(): using hyb_method=%s" % (hyb_method,))
     if not matplotlib:
         print("No matplotlib")
         return
@@ -271,9 +275,20 @@ def process_statspec(statspec, part=None, designname=None, fig=None, ax=None):
                 plotspec.setdefault('plot_kwargs', dict())[autofmtkey] = fmt.format(**format_keys)
 
     # Get scores:
-    scores = score_part_oligos(part, scoremethod=scoremethod, scoremethod_kwargs=scoremethod_kwargs)
+    # TODO: Instead of using different `hyb_method`s (one for length, another for TM),
+    # TODO: it might make better sense to have more `scoremethod` variants,
+    # TODO: i.e. 'maxlength' and 'maxtm', valleyscore and valleyscore_tm, globalmaxcount and globalmaxcount_tm.
+    # TODO: The problem, however, is that the `scoring` methods don't actually use oligos, they just get numeric data.
+    # TODO: So they can't even access e.g. sequence information. I guess that is why it made sense to just
+    # TODO: implement "TM" calculations when finding hybridization patterns.
+    scores = score_part_oligos(
+        part, scoremethod=scoremethod, scoremethod_kwargs=scoremethod_kwargs,
+        hyb_method=statspec.get('hyb_method', 'length'), hyb_kwargs=statspec.get('hyb_kwargs', dict()))
     # Make frequencies:
-    scorefreqs = statutils.frequencies(scores) if statspec.get('plot_frequencies', True) else None
+    scorefreqs = statutils.frequencies(scores, binning=int) if statspec.get('plot_frequencies', True) else None
+    # TODO: Instead of using frequencies, use a generic `plot_type` parameter to change how the scores are plotted.
+    # TODO: Rename `plot_statspec()` to `plot_scorefreqs`, and make another `plot_scores` that take a simple array
+    #       rather than taking a binned histogram
     # Plot
     plotutils.plot_statspec(scorefreqs, plotspec, fig=fig, ax=ax)
     # Post-processing (?)
@@ -289,6 +304,9 @@ def process_statspecs(directive, part=None, designname=None):
     2) Loop over all statspecs and call process_statspec.
     3) Aggregate and return a list of stats/scores.
     """
+    if pyplot is None:
+        print("\n\nERROR: matplotlib.pyplot is not available; cannot process stats specifications.\n")
+        return
     if part is None:
         part = cadnano_api.p()
     if designname is None:
@@ -297,6 +315,7 @@ def process_statspecs(directive, part=None, designname=None):
 
     statspecs = directive['statspecs']
     figspec = directive.get('figure', dict())
+    print("figspec:", figspec)
     if figspec.get('newfigure', False) or len(pyplot.get_fignums()) < 1:
         fig = pyplot.figure(**figspec.get('figure_kwargs', {}))
     else:

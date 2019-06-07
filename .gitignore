@@ -50,6 +50,8 @@ coverage.xml
 .project
 .pydevproject
 .ropeproject
+.idea/
+.vscode/
 
 # pylint:
 .pylintrc
@@ -60,4 +62,3 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-

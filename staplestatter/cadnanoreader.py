@@ -95,17 +95,24 @@ import inspect
 try:
     from Bio.SeqUtils.MeltingTemp import Tm_NN
 except ImportError:
-    print("Could not import from Bio.SeqUtils.MeltingTemp - Tm calculations will not be available!")
+    print("staplestatter: Could not import from Bio.SeqUtils.MeltingTemp - Tm calculations will not be available!")
+    # TODO: Consider having a local copy of Bio.SeqUtils.MeltingTemp, so as not to require the whole biopython package.
+    # See your Nascent project (although that one is strictly Python3, I think.
+    # OBS: The biopython package is only 2.3 MB, so not too bad a dependency matplotlib is much larger.
 
 # Cadnano imports:
-from cadnano.part.part import Part
+try:
+    # cadnano2.5:
+    from cadnano.part.part import Part
+except ImportError:
+    # cadnano2.0:
+    from model.parts.part import Part
 
 # Local imports:
-try:
-    from .cadnanolib import util
-except SystemError:
-    # Python 2
-    from cadnanolib import util
+# We just need the `overlap()` function from cadnano's `util.py` module,
+# so I've copied it to a local module, so we can use it independently of cadnano.
+from .cadnanolib import util
+
 
 # CADNANO_PATH environment variable is set so that the maya plugin works...
 
@@ -177,18 +184,23 @@ def getstrandhybridizationregions(strand, sort="5p3p"):
     (it is still in master branch as of 2015/04/24, but not in e.g. outlinerdev)
     """
     try:
-        compl_strands = strand.getComplementStrands()
+        compl_strands = strand.getComplementStrands()  # Cadnano2.5 API
     except AttributeError:
-        # pre-version2.5 :
+        # Cadnano2 API:
         compl_strands = strand.strandSet().complementStrandSet()._findOverlappingRanges(strand)
-    #hyb_regions = []
-    #for cStrand in compl_strands:
-    #    sLowIdx, sHighIdx = strand.idxs()
+
+    # # Code debugging:
+    # print("Strand %s, complementary strands: %s" % (strand, compl_strands))
+    # sLowIdx, sHighIdx = strand.idxs()
+    # print("- Strand", strand, "sLowIdx, sHighIdx:", sLowIdx, sHighIdx)
+    # hyb_regions = []
+    # for cStrand in compl_strands:
     #    cLowIdx, cHighIdx = cStrand.idxs()
     #    lowIdx, highIdx = util.overlap(sLowIdx, sHighIdx, cLowIdx, cHighIdx)
+    #    print("- cStrand", cStrand, "cLowIdx, cHighIdx:", cLowIdx, cHighIdx)
+    #    print(" - overlap, lowIdx, highIdx:", lowIdx, highIdx)
     #    hyb_regions.append((lowIdx, highIdx))    # If an oligo starts at idx 30 and ends at idx 31, it is 2 nt long.
-    hyb_regions = [util.overlap(*(strand.idxs() + cStrand.idxs()))
-                   for cStrand in compl_strands]
+    hyb_regions = [util.overlap(*(strand.idxs() + cStrand.idxs())) for cStrand in compl_strands]
 
     # Note: The hyb stretches MUST BE SORTED. The strands in hybpattern are processed from 5p to 3p, so
     # the hyb_stretches within each strand must also come in order 5p to 3p.
@@ -196,6 +208,7 @@ def getstrandhybridizationregions(strand, sort="5p3p"):
     # i.e. from low index to high (left to right in pathview).
     if sort == "5p3p" and not strand.isDrawn5to3():
         return hyb_regions[::-1]    # reverse the list
+    # print(" - hyb_regions:", hyb_regions)
     return hyb_regions
 
 def getstrandhybridizationseqs(strand, **kwargs):
@@ -209,8 +222,22 @@ def getstrandhybridizationseqs(strand, **kwargs):
     DOES NOT ACCOUNT FOR SKIPS OR LOOPS!
     """
     hyb_regions = getstrandhybridizationregions(strand)
-    startIdx = strand._base_idx_low
-    hyb_seqs = (strand.sequence()[lowIdx-startIdx:highIdx-startIdx+1] for lowIdx, highIdx in hyb_regions)
+    try:
+        # Cadnano2.5:
+        startIdx = strand._base_idx_low
+    except AttributeError:
+        # Cadnano2:
+        startIdx = strand._baseIdxLow
+
+    strand_sequence = strand.sequence()
+    # It is okay to have unhybridized loops or dangling ends, they don't change anything in terms of kinetic traps.
+    # It is only a problem is you have a whole oligo with undefined sequence.
+    # print("strand_sequence:", strand_sequence)
+    # if not strand_sequence:
+    #     print("\nError: strand %s has no sequence;" % strand,
+    #     "you should apply a sequence before doing any sequence-specific things.\n")
+    # assert strand_sequence  # Make sure we don't try this with an empty strand sequence.
+    hyb_seqs = (strand_sequence[lowIdx-startIdx:highIdx-startIdx+1] for lowIdx, highIdx in hyb_regions)
     # Uh, maybe just:
     # hyb_seqs = st.getSequenceList()
     # No, not sure this does exactly what I want...
@@ -228,9 +255,18 @@ def getstrandhybridizationtm(strand, **kwargs):
         [20, 70]
     kwargs is passed on to the Tm calculating method (currently Bio.SeqUtils.MeltingTemp.Tm_NN)
     """
-    #from Bio.SeqUtils.MeltingTemp import Tm_NN
+    from Bio.SeqUtils.MeltingTemp import Tm_NN
     # Trim out empty strand hybridizations:
-    hyb_seqs = list(seq for seq in getstrandhybridizationseqs(strand) if seq.strip())
+    hyb_seqs = list(seq for seq in getstrandhybridizationseqs(strand) if seq.strip())  # Remove loops and dangling ends
+    # print("hyb_seqs:")
+    # print(hyb_seqs)
+    # An oligo consists of one or more strands (straight stretches on the same vhelix).
+    # The strand may be broken up into different hybridizad regions, depending on the complementary strandset.
+    # Having one or more strands without specified sequence is OK, e.g. if used for making loops.
+    # If you want to check for issues, do it on the oligo level.
+    # if len(hyb_seqs) == 0:
+    #     # No defined hybridization sequences:
+    #     raise ValueError("Strand %s does not have any hybridized, sequence-specified " % (strand,))
     try:
         hyb_TMs = [Tm_NN(seq, **kwargs) for seq in hyb_seqs]
     except IndexError as e:
@@ -306,20 +342,25 @@ def get_oligo_hyb_lengths(cadnanopart, stapleoligos=True, scaffoldoligos=False):
     return hyb_lengths
 
 
-def get_oligo_hyb_pattern(cadnanopart, stapleoligos=True, scaffoldoligos=False, method="TM", **kwargs):
+def get_oligo_hyb_pattern(cadnanopart, stapleoligos=True, scaffoldoligos=False, method="length", **kwargs):
     """
     Return oligo hybridization lengths for cadnano part, as dict:
         oligo_locString : <list of oligo hybridization lenghts>
     """
-    oligoset = cadnanopart.oligos() # simply returns ._oligos. Includes BOTH staples AND scaffold.
+    oligoset = cadnanopart.oligos()  # simply returns ._oligos. Includes BOTH staples AND scaffold.
 
+    print("get_oligo_hyb_pattern(): method =", method)
     if isinstance(method, str):
         if "length" in method:
             method = getstrandhybridizationlengths
         elif "seq" in method:
             method = getstrandhybridizationseqs
-        else:
+        elif "tm" in method or "TM" in method or "melt" in method or "temp" in method:
             method = getstrandhybridizationtm
+        else:
+            err_msg = "ERROR: method='%s' is not a recognized value." % (method,)
+            raise ValueError(err_msg)
+    print("- get_oligo_hyb_pattern(): method =", method)
     # For a strand, getstrandhybridization_methods will return a list of
     # values. This is because strand may not be hybridized to the same complementary strand all the way.
     hyb_patterns = {oligo.locString(): [val for strand in oligo.strand5p().generator3pStrand()

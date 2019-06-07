@@ -192,13 +192,7 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_6">
            <item>
-            <widget class="QPlainTextEdit" name="usageTextEdit">
-             <property name="undoRedoEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
+            <widget class="QTextBrowser" name="usageTextEdit">
             </widget>
            </item>
           </layout>

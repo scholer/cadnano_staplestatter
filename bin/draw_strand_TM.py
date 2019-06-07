@@ -20,6 +20,8 @@
 
 """
 
+This script was created for Python3 and Cadnano2.5 (`devlegacy` version, from ~2015).
+
 Draw melting temperatures (TM) for individual strands in a cadnano pathview,
 outputting an svg file.
 1) Load cadnano file.
@@ -41,7 +43,7 @@ import webbrowser
 #import time
 import yaml
 import base64
-from six import string_types
+from six import string_types  # To support both python2 and python3.
 #from operator import itemgetter
 try:
     import svgwrite     # pylint: disable=F0401

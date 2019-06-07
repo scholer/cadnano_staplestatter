@@ -1,0 +1,3 @@
+# Required for some of the scripts, e.g. melting temperature (TM) and overlaying melting temperature on pathview image.
+biopython
+svgwriter

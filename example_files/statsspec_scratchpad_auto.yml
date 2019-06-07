@@ -1,18 +1,14 @@
-# See USAGE tab/file for info
-# Regarding scoremethod_kwargs: {margin: 0}
-# 'margin' is currently only keyword argument.
-# This is set at a per-plot level. It is not used by all scoring methods.
+# See USAGE tab/document for info
 # scoremethod is usually one of 'maxlength', 'valleyscore', or 'globalmaxcount'.
 statspecs:
 - scoremethod: maxlength
   scoremethod_kwargs: {}
+  hyb_method: length
   plotspec:
     plot_kwargs: {hold: true, color: auto, xoffset: auto}
     label_fmt : "{designname}"
     xlabel_fmt : "{scoremethod}"
     title : false
-    xlim : [5, 28]
-    ylim : [0, 225]
     subplot: 211
     legend: {loc: 0, prop: {size : small}}
   printspec: { highest : 5, threshold : 1, printstats: true, printtofile : false, hightolow : true }
@@ -22,8 +18,6 @@ statspecs:
     plot_kwargs: {hold: true, color: auto, xoffset: auto}
     label_fmt : "{designname}"
     xlabel_fmt : "{scoremethod}"
-    xlim : [-0.1, 5.1]
-    ylim : [0, 250]
     title : false
     subplot: 223
   printspec: { highest : 5, threshold : 1, printstats: true, printtofile : false, hightolow : true }
@@ -33,8 +27,6 @@ statspecs:
     plot_kwargs: {hold: true, color: auto, xoffset: auto, ylabel: false}
     label_fmt : "{designname}"
     xlabel_fmt : "{scoremethod}"
-    xlim : [-0.1, 5.1]
-    ylim : [0, 250]
     title : false
     subplot: 224
   printspec: { highest : 5, threshold : 2, printstats: true, printtofile : false, hightolow : true }

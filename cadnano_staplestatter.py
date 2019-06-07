@@ -31,41 +31,22 @@ with the cadnano data extraction logic in cadnanoreader.py
 Updating the mainwindow's statusbar:
     self.win.statusBar().showMessage(statusString)
 """
+
+from __future__ import absolute_import
 import os
-import util
-import cadnano_api
+
+# Cadnano imports:
 import cadnano
-
-#try:
-#    qt_available = util.chosenQtFramework or util.find_available_qt_framework()
-#except AttributeError as e:
-#    msg = "AttributeError: %s - this cadnano might be too old for this plugin, aborting load." % (e, )
-#    print msg
-#    raise ImportError(msg)
-
-#from cadnanonavigator_ui import Ui_Navigator
-#if qt_available.lower() == 'pyside':
-#    print "Staplestatter: Using PySide."
-#    from _ui.cadnano_staplestatter_ui import Ui_Dialog
-#else:
-#    try:
-#        print "Staplestatter: Using PyQt4."
-#        from cadnano_staplestatter_ui import Ui_Dialog
-#    except ImportError:
-#        print "PyQt4 failed, trying PySide..:"
-#        try:
-#            from pyside_ui.cadnano_staplestatter_ui import Ui_Dialog
-#        except ImportError:
-#            print "PySide also failed.."
-#            raise ImportError("Could not Ui_Dialog from cadnano_staplestatter_ui")
-
-from ui.staplestatter_ui import Ui_Dialog   # logic is handled by ui/__init__.py
+import util
 
 util.qtWrapImport('QtGui', globals(), ['QIcon', 'QPixmap', 'QAction'])
 util.qtWrapImport('QtGui', globals(), ['QDialog', 'QKeySequence', 'QDialogButtonBox', 'QIntValidator', 'QFileDialog'])
-util.qtWrapImport('QtCore', globals(), ['Qt', 'QString', 'QSettings', 'QDir'])
+util.qtWrapImport('QtCore', globals(), ['Qt', 'QString', 'QSettings', 'QDir', 'QUrl'])
 
-import staplestatter
+# Staplestatter imports:
+from .ui.staplestatter_ui import Ui_Dialog   # logic is handled by ui/__init__.py
+from .staplestatter import staplestatter
+from .staplestatter.staplestatter import process_statspecs_string, savestats
 
 
 
@@ -168,12 +149,16 @@ class StaplestatterHandler(object):
     def load_defaults(self):
         """ Load default settings using hard-wired directive file in example_files. """
         uiDia = self.staplestatterDialog
-        filepath = os.path.join(os.path.dirname(__file__), "example_files", "rs_statmethods5.yml")
+        filepath = os.path.join(os.path.dirname(__file__), "example_files", "statsspec_scratchpad_auto.yml")
         self.loadSpecFromFile(filepath, rememberDir=False)
-        #usageTextEdit
-        filepath = os.path.join(os.path.dirname(__file__), "USAGE.txt")
+        filepath = os.path.join(os.path.dirname(__file__), "USAGE.html")
+        relpath = os.path.relpath(filepath, os.path.abspath(os.getcwd()))
+        print "filepath:", filepath
+        print "relpath:", relpath
         try:
-            uiDia.usageTextEdit.setPlainText(open(filepath).read())
+            # TODO: Swap the 'usage' QPlainTextEdit widget with QTextBrowser and show HTML instead of plain-text.
+            # uiDia.usageTextEdit.setPlainText(open(filepath).read())
+            uiDia.usageTextEdit.setSource(QUrl(":"+relpath))
         except IOError:
             print "Could not load USAGE file: ", filepath
 

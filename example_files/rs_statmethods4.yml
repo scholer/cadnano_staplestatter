@@ -1,4 +1,4 @@
-# See USAGE.txt for info
+# See USAGE tab/file for info
 statspecs:
 - scoremethod: maxlength
   scoremethod_kwargs: {}

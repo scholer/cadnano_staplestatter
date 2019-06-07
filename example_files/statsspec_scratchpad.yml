@@ -1,11 +1,9 @@
 # See USAGE tab/file for info
-# Regarding scoremethod_kwargs: {margin: 0}
-# 'margin' is currently only keyword argument.
-# This is set at a per-plot level. It is not used by all scoring methods.
 # scoremethod is usually one of 'maxlength', 'valleyscore', or 'globalmaxcount'.
 statspecs:
 - scoremethod: maxlength
   scoremethod_kwargs: {}
+  hyb_method: length
   plotspec:
     plot_kwargs: {hold: true, color: auto, xoffset: auto}
     label_fmt : "{designname}"

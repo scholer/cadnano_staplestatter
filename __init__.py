@@ -32,13 +32,16 @@ Package structure:
     plotutils : General plotting functions, also unaware of "cadnano model parts", etc.
 
 """
+from __future__ import absolute_import, print_function
+
+import cadnano
+from .cadnano_staplestatter import StaplestatterHandler
 
 try:
-    import cadnano
-    from cadnano_staplestatter import StaplestatterHandler
+    pass
 except ImportError as e:
     msg = "\nImportError: %s - either the cadnano version is too old for this plugin, or you are running without cadnano. Staplestatter will not be available for cadnano as a plugin.\n" % (e, )
-    print msg
+    print(msg)
 else:
     # If no ImportError:
     def documentWindowWasCreatedSlot(document, win):
@@ -50,4 +53,4 @@ else:
         doc, win = c.document(), c.window()
         doc.staplestatterHandler = StaplestatterHandler(doc, win) # Maybe this should just be set to the window?
     cadnano.app().documentWindowWasCreatedSignal.connect(documentWindowWasCreatedSlot)
-    print "cadnano staplestatter plugin loaded!"
+    print("cadnano staplestatter plugin loaded!")
