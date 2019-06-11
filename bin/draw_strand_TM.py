@@ -71,9 +71,10 @@ logger = logging.getLogger(__name__)
 # If you don't already have this on your path:
 
 BINDIR = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.dirname(BINDIR)) # Staplestatter library
-# Cadnano library:
-sys.path.insert(0, os.path.normpath(r"C:\Users\scholer\Dev\src-repos\cadnano\cadnano2.5"))
+sys.path.insert(0, os.path.dirname(BINDIR))  # Add Staplestatter root dir to the PATH.
+# Add cadnano root directory to the PATH: (cadnano 2.5)
+# Uncomment the line below and update according to your setup, if you haven't already installed cadnano on your PATH.
+# sys.path.insert(0, os.path.normpath(r"C:\Users\scholer\Dev\cadnano2.5"))
 
 
 

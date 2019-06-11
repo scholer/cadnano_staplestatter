@@ -1,21 +1,43 @@
 
+Staplestatter: Tools and library code for statistical analysis and visualization 
+of staple strands binding within a cadnano DNA origami design.
+ 
+This python project contains a library package, as well as a cadnano plugin and CLI tools 
+for analyzing DNA origami designs created with cadnano (`.json` files).
+
+The binding statistics can be used to check that all staple strands are stably bound,
+that the staple strands have only one primary binding domain, and check for kinetic traps during annealing.
+
+The analysis can be done either based purely on domain length,
+or based on the actual, sequence-dependent melting temperature of the individual domains.
+
+
+The installation procedure depends on the version of cadnano you would like to use.
+Staplestatter currently works with three versions of cadnano:
+
+1. The original cadnano2 version.
+2. The new "Python 3 + PyQt 5" version of cadnano 2 (`cadnano2-pyqt5`).
+3. The "devlegacy" version of cadnano2.5. 
+    (Cadnano2.5 has been in development for so long that there are now many different 
+    and incompatible versions of cadnano2.5).
+
+If you have no preference, I currently suggest you use the `cadnano2-pyqt5` version of cadnano.
 
 
 
 
 
+Installation for cadnano 2.5 (legacy release):
+----------------------------------------------
 
-
-Installation (cadnano 2.5):
-----------------------------
-
-
-
-OBS: There are multiple versions of staplestatter, depending on the version of cadnano that you intend to use.
-The main version of staplestatter was written for a specific version of cadnano2.5 from around 2015.
-I belive this can be found under the `devlegacy` tag, https://github.com/cadnano/cadnano2.5/tree/devlegacy.
 
 The instructions below should help you install and use this plugin (as of June 2019).
+
+OBS: The most recent versions of cadnano2.5 appears to have removed support for plugins (github master branch).
+Thus, to use staplestatter with cadnano2.5, we need to use the 'devlegacy' version (tagged version on github).
+In general, since cadnano2.5 is still under heavy development and therefore have a rather unstable API,
+I don't recommend using cadnano2.5, unless you really need some of the features that it provides.
+Instead, I recommend using `cadnano2-pyqt5`, as detailed in the next section (below).
 
 
 **First**, I recommend setting everything up in a *dedicated conda environment*. To do this:
@@ -26,14 +48,15 @@ The instructions below should help you install and use this plugin (as of June 2
 
 2. Create a new conda environment (tested with pyqt-5.9.2):
 
-    * `conda create -n cadnano25-legacy python=3 pyqt=5`
+    * If using cadnano2.5:      `conda create -n cadnano25-legacy python=3 pyqt=5 matplotlib pyyaml biopython`
+
 
 3. Activate the dedicated environment. You must do this every time you open a new terminal to work on cadnano:
 
     * `conda activate cadnano25-legacy`
 
 
-**Second**, install the "devlegacy" versoin of cadnano2.5:
+**Second**, install the "devlegacy" version of cadnano2.5:
 
 1. Clone the cadnano2.5 repository to a suitable location and check out the `devlegacy` version:
 
@@ -42,52 +65,154 @@ The instructions below should help you install and use this plugin (as of June 2
     * Go into the `cadnano25-legacy` directory: `cd cadnano25-legacy`.
     * Important: Check out the `devlegacy` version: `git checkout devlegacy`
 
-2. Unfortunately, the rather old `devlegacy` of cadnano 2.5 didn't support traditional python setup installation. 
-    So, the only way to "install cadnano" is to add the `cadnano25-legacy` folder to your path (environment variable).
+2. Unfortunately, the rather old `devlegacy` of cadnano 2.5 doesn't support traditional python setup installation. 
+    So, the only way to "install cadnano" is either to always run cadnano from within the `cadnano25-legacy` folder,
+    or add the `cadnano25-legacy` folder to your path by updating the environment `PATH` variable using
+    `set PATH=%USERPROFILE%\Dev\cadnano25-legacy;%PATH%`.
     You need to do this every time you open a new terminal.
-    * `set PATH=%USERPROFILE%\Dev\cadnano25-legacy;%PATH%`
 
 3. Check that your cadnano installation works:
     * Make sure you are in the cadnano2.5 root directory (e.g. `cd cd %USERPROFILE%\Dev\cadnano25-legacy`).
-    * Run `python bin/main.py`
+    * Run `python bin/main.py`.
     * Open an origami JSON file, or create a new design from scratch.
-        * OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files, 
-            yielding a ValueError or similar in the terminal stack trace 
-            (look for a line including `json\decoder.py` file and the words `decode` or `raw_decode`)
-            * This is not a bug, but a feature: Cadnano1 did not actually save in proper JSON format, 
-                so the resulting files are actually not valid JSON files. 
-                They would still open in early versions of Cadnano2, because instead of actually using 
-                the proper json library, the decoder would just use `eval()` to load the file.
-                This worked, because JSON format is very similar to Python dicts and lists, 
-                but it is obviously a really unsafe way to load files that may come from an unknown source.
-            * To convert old cadnano1 json files to new cadnano2 files, use the following python command:
-                * `python -c "import json; json.dump(eval(open('<cadnano1-file.json>').read()), open('<cadnano2-file.json>', 'w'))"`
-                * Example: 
-                    `python -c "import json; json.dump(eval(open('150526_cc6hb_v0_mod.json').read()), open('150526_cc6hb_v0_mod-fixed.json', 'w'))"`
-
+        * OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files created with cadnano1. 
+            If you have problems openin old `.json` files, see the appendix below for a quick way to 
+            fix the old files so you can open them with later versions of cadnano.
+    * Check that everything works, and that you don't get any errors in the command prompt / terminal.
 
 
 
 **Third**, download and install staplestatter:
 
-1. Clone the cadnano2 repository: `git clone git@github.com:scholer/staplestatter.git`.
+1. Clone the staplestatter repository: `git clone git@github.com:scholer/staplestatter.git`.
 
 2. If you want to install staplestatter as a "cadnano plugin", 
     you must either move the staplestatter folder to the `plugins` folder inside the `cadnano25-legacy` folder, 
-    or alternatively make a directory symlink: 
+    or alternatively make a directory symlink within the cadnano plugins folder pointing to the staplestatter directory: 
     1. Go to plugins directory: `cd cadnano25-legacy\cadnano\gui\plugins`
     2. Create symbolic link: `mklink /D staplestatter %USERPROFILE%\Dev\staplestatter`
     3. Traverse the symbolic link: `dir staplestatter`  - make sure you don't get any errors.
 
-3. "Install" staplestatter by adding it to your PATH environment variable. 
-    (Again, the old Cadnano2 system didn't really use or support traditional python setup.py installation; this has changed in later versions of cadnano.) 
+3. If you want to use staplestatter as a library, that you can use from any python script (also outside cadnano),
+    you can "pip install" staplestatter by going to the staplestatter root directory, 
+    and typing `pip install -e .`  (remember the space and period after `-e`).
 
 
 
 
+**Fourth, check that staplestatter works as cadnano plugin:**
 
-Installing staplestatter for the old cadnano2 (not 2.5):
----------------------------------------------------------
+* Re-launch cadnano: Close cadnano if it is currently open, 
+    then in the command prompt / terminal make sure you are in the cadnano root directory,
+    and launch cadnano as usuaal with `python bin/main.py`.
+* Check the command prompt / terminal to make sure you don't get any ImportErrors or other errors.
+* Open an existing cadnano design (`.json` file).
+* In the tool bar inside cadnano you should now see a new button that you can use to open staplestatter plugin widget.
+    Click it and see that the staplestatter plugin opens as it should.
+* You can run a quick test to see if it works by pressing the "Process and plot!" button in the staplestatter window.
+* See "Using staplestatter as cadnano plugin" below.
+
+
+
+
+Installation for cadnano2-pyqt5:
+---------------------------------
+
+
+**Cadnano2-pyqt5** is currently my favorite version of cadnano:
+
+* Cadnano2-pyqt5 is a clean fork of cadnano2, ported to use Python 3 and PyQt5, 
+    instead of the very old Python 2 and PyQt 4. 
+    This adds a lot of benefits and simplicity over the original Cadnano2 version,
+    while still being relatively stable and bug-free.
+
+* Since cadnano2.5 is still under heavy development and therefore have a rather unstable API,
+    I don't recommend using cadnano2.5, unless you really need some of the features that it provides.
+
+
+
+**First**, I recommend setting everything up in a *dedicated conda environment*. To do this:
+
+1. Install Anaconda or Miniconda, if you haven't already. 
+    * Anaconda comes with a lot of "ready-to-use" stuff, and is thus a much bigger install. Can be downloaded from https://www.anaconda.com/distribution/.
+    * Miniconda is a smaller, more bare-bones distribution. Can be downloaded from https://docs.conda.io/en/latest/miniconda.html.
+
+2. Create a new conda environment (tested with pyqt-5.9.2):
+
+    * If using cadnano2-pyqt5:  `conda create -n cadnano2-pyqt5 python=3 pyqt=5 matplotlib pyyaml biopython six`
+
+
+3. Activate the dedicated environment. You must do this every time you open a new terminal to work on cadnano:
+
+    * `conda activate cadnano2-pyqt5`
+
+
+**Second**, install cadnano2-pyqt5:
+
+1. Clone the cadnano2-pyqt5 repository to a suitable location:
+
+    * Change directory to a suitable location, e.g. `cd %USERPROFILE%\Dev`.
+    * Clone the cadnano2 repository: `git clone git@github.com:scholer/cadnano2-pyqt5.git cadnano2-pyqt5`.
+    * Go into the `cadnano2-pyqt5` directory: `cd cadnano2-pyqt5`.
+
+2. Unfortunately, the rather old cadnano 2 doesn't support traditional python setup installation. 
+    So, the only way to "install cadnano" is either to always run cadnano from within the `cadnano2-pyqt5` folder,
+    or add the `cadnano2-pyqt5` folder to your path by updating the environment `PATH` variable using
+    `set PATH=%USERPROFILE%\Dev\cadnano2-pyqt5;%PATH%`.
+    You need to do this every time you open a new terminal.
+
+3. Check that your cadnano installation works:
+    * Make sure you are in the `cadnano2-pyqt5` root directory (e.g. `cd cd %USERPROFILE%\Dev\cadnano2-pyqt5`).
+    * Run `python main.py`.
+    * Open an origami JSON file, or create a new design from scratch.
+        * OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files created with cadnano1. 
+            If you have problems openin old `.json` files, see the appendix below for a quick way to 
+            fix the old files so you can open them with later versions of cadnano.
+    * Check that everything works, and that you don't get any errors in the command prompt / terminal.
+
+
+
+**Third**, download and install staplestatter:
+
+1. Clone the staplestatter repository: `git clone git@github.com:scholer/staplestatter.git`.
+
+2. If you want to install staplestatter as a "cadnano plugin", 
+    you must either move the staplestatter folder to the `plugins` folder inside the `cadnano2-pyqt5` folder, 
+    or alternatively make a directory symlink within the cadnano plugins folder pointing to the staplestatter directory: 
+    1. Go to plugins directory: `cd cadnano2-pyqt5\plugins`
+    2. Create symbolic link: `mklink /D staplestatter %USERPROFILE%\Dev\staplestatter`
+    3. Traverse the symbolic link: `dir staplestatter`  - make sure you don't get any errors.
+
+3. If you want to use staplestatter as a library, that you can use from any python script (also outside cadnano),
+    you can "pip install" staplestatter by going to the staplestatter root directory, 
+    and typing `pip install -e .`  (remember the space and period after `-e`).
+
+
+
+
+**Fourth, check that staplestatter works as cadnano plugin:**
+
+* Re-launch cadnano: Close cadnano if it is currently open, 
+    then in the command prompt / terminal make sure you are in the cadnano root directory,
+    and launch cadnano as usuaal with `python main.py`.
+* Check the command prompt / terminal to make sure you don't get any ImportErrors or other errors.
+* Open an existing cadnano design (`.json` file).
+* In the tool bar inside cadnano you should now see a new button that you can use to open staplestatter plugin widget.
+    Click it and see that the staplestatter plugin opens as it should.
+* You can run a quick test to see if it works by pressing the "Process and plot!" button in the staplestatter window.
+* See "Using staplestatter as cadnano plugin" below.
+
+
+
+
+Installing staplestatter for the old cadnano2:
+------------------------------------------------
+
+The old Cadnano2 is probably what you have been using if you have just downloaded cadnano from the cadnano website.
+This version of cadnano is now rather old, but still supported for those who need it.
+It uses Python 2 and PyQt 4, which are both really old and mostly obsolete.
+If you have a choice, I would probably recommend you give `cadnano2-pyqt5` a try first,
+and only use the old cadnano2 version if `cadnano2-pyqt5` doesn't work for you.
 
 
 
@@ -100,7 +225,7 @@ Installing staplestatter for the old cadnano2 (not 2.5):
 
 2. Create a new conda environment:
 
-    * `conda create -n cadnano2-py27-pyqt4 python=2 pyqt=4 matplotlib biopython`
+    * `conda create -n cadnano2-py27-pyqt4 python=2 pyqt=4 pyyaml matplotlib biopython six`
 
 3. Activate the dedicated environment. You must do this every time you open a new terminal to work on cadnano:
 
@@ -123,19 +248,10 @@ Installing staplestatter for the old cadnano2 (not 2.5):
     * `cd cadnano2`
     * `python main.py`
     * Open an origami JSON file, or create a new design from scratch.
-        * OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files, 
-            yielding a ValueError or similar in the terminal stack trace 
-            (look for a line including `json\decoder.py` file and the words `decode` or `raw_decode`)
-            * This is not a bug, but a feature: Cadnano1 did not actually save in proper JSON format, 
-                so the resulting files are actually not valid JSON files. 
-                They would still open in early versions of Cadnano2, because instead of actually using 
-                the proper json library, the decoder would just use `eval()` to load the file.
-                This worked, because JSON format is very similar to Python dicts and lists, 
-                but it is obviously a really unsafe way to load files that may come from an unknown source.
-            * To convert old cadnano1 json files to new cadnano2 files, use the following python command:
-                * `python -c "import json; json.dump(eval(open('<cadnano1-file.json>').read()), open('<cadnano2-file.json>', 'w'))"`
-                * Example: 
-                    `python -c "import json; json.dump(eval(open('150526_cc6hb_v0_mod.json').read()), open('150526_cc6hb_v0_mod-fixed.json', 'w'))"`
+        * OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files created with cadnano1. 
+            If you have problems openin old `.json` files, see the appendix below for a quick way to 
+            fix the old files so you can open them with later versions of cadnano.
+    * Check that everything works, and that you don't get any errors in the command prompt / terminal.
 
 
 
@@ -153,21 +269,29 @@ Installing staplestatter for the old cadnano2 (not 2.5):
     2. Create symbolic link: `mklink /D staplestatter %USERPROFILE%\Dev\staplestatter`
     3. Traverse the symbolic link: `dir staplestatter`  - make sure you don't get any errors.
 
-<!--
-3. "Install" staplestatter by adding it to your PATH environment variable. 
-    (Again, the old Cadnano2 system didn't really use or support traditional python setup.py installation; 
-    this has changed in later versions of cadnano.) 
--->
+3. If you want to use staplestatter as a library, that you can use from any python script (also outside cadnano),
+    you can "pip install" staplestatter by going to the staplestatter root directory, 
+    and typing `pip install -e .`  (remember the space and period after `-e`).
+
+
 
 
 **Fourth, check that staplestatter works as cadnano plugin:**
 
+* Re-launch cadnano: Close cadnano if it is currently open, 
+    then in the command prompt / terminal make sure you are in the cadnano root directory,
+    and launch cadnano as usuaal with `python main.py`.
+* Check the command prompt / terminal to make sure you don't get any ImportErrors or other errors.
+* Open an existing cadnano design (`.json` file).
+* In the tool bar inside cadnano you should now see a new button that you can use to open staplestatter plugin widget.
+    Click it and see that the staplestatter plugin opens as it should.
+* You can run a quick test to see if it works by pressing the "Process and plot!" button in the staplestatter window.
 * See "Using staplestatter as cadnano plugin" below.
 
 
 
 
-Using staplestatter as cadnano plugin:
+Using the staplestatter cadnano plugin:
 ---------------------------------------
 
 
@@ -202,7 +326,47 @@ Using staplestatter as cadnano plugin:
     within the staplestatter folder.
     After loading the `statsspec_scratchpad_TM.yml` directive, press "Process and plot!" again.
 
-6. 
+
+
+Using the staplestatter python library:
+---------------------------------------
+
+You can use the functions that staplestatter provides in normal python code outside of cadnano.
+This can be useful if you have a lot of designs that you would like to plot,
+without having to go through the steps of manually opening each design in cadnano.
+
+After "pip installing" the staplestatter library, you can import the staplestatter packages, modules and functions
+like you would any other library.
+Note that in order to e.g. load a cadnano `.json` file, 
+you must also have cadnano "installed" and available in your `PATH`, 
+as outlined above in the second step about installing cadnano.
+
+    import staplestatter
+
+For more examples on how to use the staplestatter library, see the scripts in the `bin/` folder.
+
+
+
+
+
+Appendix: Fixing old cadnano `.json` files:
+---------------------------------------------
+
+OBS: New versions of cadnano2 will sometimes refuse to open old cadnano JSON files, 
+yielding a ValueError or similar in the terminal stack trace 
+(look for a line including `json\decoder.py` file and the words `decode` or `raw_decode`)
+
+* This is not a bug, but a feature: Cadnano1 did not actually save in proper JSON format, 
+        so the resulting files are actually not valid JSON files. 
+        They would still open in early versions of Cadnano2, because instead of actually using 
+        the proper json library, the decoder would just use `eval()` to load the file.
+        This worked, because JSON format is very similar to Python dicts and lists, 
+        but it is obviously a really unsafe way to load files that may come from an unknown source.
+
+To convert old cadnano1 json files to new cadnano2 files, use the following python command: `python -c "import json; json.dump(eval(open('<cadnano1-file.json>').read()), open('<cadnano2-file.json>', 'w'))"`
+* Example: 
+        `python -c "import json; json.dump(eval(open('150526_cc6hb_v0_mod.json').read()), open('150526_cc6hb_v0_mod-fixed.json', 'w'))"`
+
 
 
 

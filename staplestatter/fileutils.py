@@ -31,6 +31,7 @@ import os
 import json
 import yaml
 
+# This module is currently only for cadnano2.5 - I need to update this for cadnano2:
 from cadnano.document import Document
 from cadnano.fileio.nnodecode import decodeFile, decode
 
