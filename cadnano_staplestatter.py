@@ -62,7 +62,6 @@ from .staplestatter.staplestatter import process_statspecs_string, savestats
 from .staplestatter.cadnanoreader import get_part_alt, get_part
 
 
-
 class StaplestatterHandler(object):
     """
     Main plugin object, takes care of showing GUI widget/window
@@ -71,15 +70,15 @@ class StaplestatterHandler(object):
     def __init__(self, document, window):
         self.doc, self.win = document, window
         # d().controller().window()
-        #self.app = self.win.app()
+        # self.app = self.win.app()
         icon10 = QIcon()
         icon_path = os.path.join(os.path.dirname(__file__), "res", "staplestatter_icon_32x32.png")
-        #print "os.path.isfile(", icon_path, ") : ", os.path.isfile(icon_path)
+        # print "os.path.isfile(", icon_path, ") : ", os.path.isfile(icon_path)
         icon10.addPixmap(QPixmap(icon_path), QIcon.Normal, QIcon.Off)
         self.menuaction = QAction(window)
         self.menuaction.setIcon(icon10)
         self.menuaction.setText('Staplestatter')
-        self.menuaction.setToolTip("Use the navigator to quickly navigate around the cadnano views.")
+        self.menuaction.setToolTip("Staplestatter plugin provides some quick metrics for your cadnano design.")
         self.menuaction.setObjectName("actionStaplestatter")
         self.menuaction.triggered.connect(self.menuactionSlot)
         try:
@@ -98,11 +97,10 @@ class StaplestatterHandler(object):
         self.settings = QSettings()
         self._fileOpenPath = None
         self._readSettings()
-        self._lastResult = None # dict(figure=fig, scores=allscores)
+        self._lastResult = None  # dict(figure=fig, scores=allscores)
 
     def _readSettings(self):
-        """
-        Reads settings.
+        """ Reads settings.
         Currenly this just loads the path of the last opened file, which is stored as self._fileOpenPath
         """
         self.settings.beginGroup("Staplestatter")
@@ -123,14 +121,11 @@ class StaplestatterHandler(object):
             self.settings.endGroup()
 
     def _writeFileOpenPath(self, path):
-        """
-        Makes sure to save/remember the *directory* path of the last opened file to settings.
-        """
+        """ Makes sure to save/remember the *directory* path of the last opened file to settings. """
         self._fileOpenPath = path
         self.settings.beginGroup("Staplestatter")
         self.settings.setValue("openpath", path)
         self.settings.endGroup()
-
 
     def document(self):
         """ Returns the main document. """
@@ -139,23 +134,13 @@ class StaplestatterHandler(object):
     def getDirectiveStr(self, ):
         """ Returns content of the specfile text input field as plain text. """
         # toPlainText --> returns specfileTextEdit.plainText property.
-        return str(self.staplestatterDialog.specfileTextEdit.toPlainText()) # Should always work...
-        #try:
-        #    directivestr = directivestr.toString()
-        #except AttributeError as e:
-        #    print "AttributeError while doing directivestr.toString()", e
-        #print "Returning directivestr of type: ", type(directivestr)
-        #return directivestr
+        return str(self.staplestatterDialog.specfileTextEdit.toPlainText())  # Should always work...
 
     def setDirectiveStr(self, directive):
         """ Sets the content of the specfile text input field. """
         # toPlainText --> returns specfileTextEdit.plainText property.
-        self.staplestatterDialog.specfileTextEdit.setPlainText(directive) # should work for plain python strings as well as QStrings.
-        #directive = QString(directive)  # Should be ok with pyside, uses QString = str.
-        #try:
-        #    self.staplestatterDialog.specfileTextEdit.setPlainText(directive)
-        #except AttributeError as e:
-        #    print "setDirectiveStr Error : ", e
+        # This should work for plain python strings as well as QStrings:
+        self.staplestatterDialog.specfileTextEdit.setPlainText(directive)
 
     def getSpecfilepath(self):
         """ Returns specfilepath from lineedit widget. """
@@ -164,7 +149,6 @@ class StaplestatterHandler(object):
     def setSpecfilepath(self, filepath):
         """ Sets specfilepath in lineedit widget. """
         self.staplestatterDialog.specfilepathLineEdit.setText(filepath)
-
 
     def load_defaults(self):
         """ Load default settings using hard-wired directive file in example_files. """
@@ -181,7 +165,6 @@ class StaplestatterHandler(object):
             uiDia.usageTextEdit.setSource(QUrl(":"+relpath))
         except IOError:
             print("Could not load USAGE file: ", filepath)
-
 
     def menuactionSlot(self):
         """Only show the dialog if staple strands exist."""
@@ -211,7 +194,7 @@ class StaplestatterHandler(object):
             print("Oligo:", o, "(staple)" if o.isStaple() else "(scaf)")
             if o.isStaple():  # is there a staple oligo?
                 print("self.staplestatterDialog:", self.staplestatterDialog)
-                if self.staplestatterDialog == None:
+                if self.staplestatterDialog is None:
                     self.staplestatterDialog = StaplestatterDialog(self.win, self)
                     self.make_ui_connections()
                     self.load_defaults()        # Only do this AFTER StaplestatterDialog has been created.
@@ -219,7 +202,6 @@ class StaplestatterHandler(object):
                 print(" - invoking self.staplestatterDialog.show() ...")
                 self.staplestatterDialog.show()
                 return
-
 
     def make_ui_connections(self):
         """
@@ -238,8 +220,6 @@ class StaplestatterHandler(object):
         uiDia.loadSpecfileButton.clicked.connect(self.loadSpecfileSlot)
         uiDia.saveSpecfileButton.clicked.connect(self.saveSpecfileSlot)
         uiDia.saveSpecfileAsButton.clicked.connect(self.saveSpecfileAsSlot)
-
-
 
     ### SLOTS ###
 
@@ -280,7 +260,6 @@ class StaplestatterHandler(object):
         else:
             print("No stats yet: self._lastResult: ", self._lastResult)
 
-
     def saveStatsToFileSlot(self):
         """ Qt event slot, saves stats to file. """
         print("saveStatsToFileSlot() invoked by pressing browseStatsfileButton.")
@@ -295,7 +274,6 @@ class StaplestatterHandler(object):
             staplestatter.savestats(self._lastResult['scores'], filepath)
         else:
             print("No stats yet: self._lastResult: ", self._lastResult)
-
 
     def newSpecfileSlot(self):
         """ Qt event slot, creates new specfile. """
@@ -322,9 +300,7 @@ class StaplestatterHandler(object):
         self.saveSpecToFile()
 
     def saveSpecfileAsSlot(self):
-        """
-        Qt event slot, prompts for file with browser and saves content of spec text input to specified file.
-        """
+        """ Qt event slot, prompts for file with browser and saves content of spec text input to specified file. """
         print("browseSpecfileSlot() invoked by pressing browseSpecfileButton.")
         filepath = self.browseForNewOrExistingFile()
         if not filepath:
@@ -332,7 +308,6 @@ class StaplestatterHandler(object):
             return
         self.setSpecfilepath(filepath)
         self.saveSpecToFile()
-
 
     def loadSpecFromFile(self, filepath, rememberDir=True):
         """ Loads specfile from filepath. """
@@ -357,9 +332,10 @@ class StaplestatterHandler(object):
         except IOError:
             print("Could not save directive to spec file: ", filepath)
 
-
-    def browseForExistingFile(self, dialog_title="Open staplestatter directive",
-                      filefilter="YAML data structure (*.yml *.yaml)"):
+    def browseForExistingFile(
+            self, dialog_title="Open staplestatter directive",
+            filefilter="YAML data structure (*.yml *.yaml)"
+    ):
         """ Opens Qt file dialog and lets the user select an existing file. """
         # QFileDialog.getOpenFileName(<parent>, <str title>, <str directory>, <str "Filter name (glob filters)")
         filepath = QFileDialog.getOpenFileName(self.staplestatterDialog, dialog_title, self._fileOpenPath, filefilter)
@@ -368,9 +344,10 @@ class StaplestatterHandler(object):
             print("Filepath: ", filepath)
         return str(filepath)
 
-    def browseForNewOrExistingFile(self, dialog_title="Open staplestatter directive",
-                      filefilter= "YAML data structure (*.yml *.yaml)",
-                      directory=None):
+    def browseForNewOrExistingFile(
+            self, dialog_title="Open staplestatter directive",
+            filefilter= "YAML data structure (*.yml *.yaml)",
+            directory=None):
         """ Opens Qt file dialog and lets the user select a new or existing file. """
         if directory is None:
             directory = self._fileOpenPath
@@ -387,11 +364,8 @@ class StaplestatterHandler(object):
         return str(filepath)
 
 
-
-
 class StaplestatterDialog(QDialog, StaplestatterUiDialog):
-    """
-    Staplestatter dialog window/widget.
+    """ Staplestatter dialog window/widget.
     Combines QDialog with the generated StaplestatterUiDialog (created from .ui file).
     """
     def __init__(self, parent, handler):
@@ -402,9 +376,8 @@ class StaplestatterDialog(QDialog, StaplestatterUiDialog):
         #fb = self.buttonBox.button(QDialogButtonBox.Cancel)
         #fb.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_R ))
 
-
     def keyPressEvent(self, e):
-        """Not sure what this does?"""
+        """ Use QDialog parent class to deal with key presses. """
         return QDialog.keyPressEvent(self, e)
 
     def closeDialog(self):
