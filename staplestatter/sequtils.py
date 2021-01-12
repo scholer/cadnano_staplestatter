@@ -103,4 +103,3 @@ def apply_sequence_reminder(part, sequence, criteria=None):
         scaf_oligo = next(oligo for oligo in part.oligos() if not oligo.isStaple())
         scaf_oligo.applySequence(sequence, use_undostack=False)
     #
-

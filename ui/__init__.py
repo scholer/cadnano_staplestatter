@@ -12,12 +12,13 @@ except ImportError:
 
 try:
     # This might fail on old versions of cadnano which fail to set util.chosenQtFramework properly
-    # and does not have a util.find_available_qt_framework function:
+    # and does not have a util.find_available_qt_framework function.
+    # It will also fail for cadnano2-pyqt5 and cadnano2.5:
     qt_available = util.chosenQtFramework or util.find_available_qt_framework()
 except AttributeError as e:
-    print("AttributeError '%s' while determining Qt binding framework. "
-          "You are probably either using cadnano2.5, or a really old version of cadnano2."
-          "PySide support will not be available.")
+    print('Note: AttributeError ("%s") while determining Qt binding framework.' % (e,),
+          "You are probably either using cadnano2-pyqt5, or cadnano2.5, or a really old version of cadnano2.",
+          "PySide support will not be available. This is most likely fine.")
     qt_available = 'PyQt5'
     qt = qt_available.lower()
     from .staplestatter_ui_pyqt5 import Ui_Dialog as StaplestatterUiDialog

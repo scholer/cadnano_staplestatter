@@ -332,6 +332,7 @@ def apply_scaffold_sequence(part, seq, offset=None, verbose=None,
               .format(L, scaf_oligo.length()))
     scaf_oligo.applySequence(seq, use_undostack=False)
 
+
 def apply_sequences(part, seqs, offset=None, verbose=0):
     """
     Apply sequences in seqs to oligos in part.

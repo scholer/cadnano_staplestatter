@@ -137,7 +137,6 @@ def get_part(doc):
     return parts[0]
 
 
-
 def get_part_alt(doc):
     """ Cadnano is currently a little flaky regarding how to get the part. This tries to mitigate that. """
     try:
@@ -161,7 +160,6 @@ def get_part_alt(doc):
             # Try something else
             part = doc.children()[0]
     return part
-
 
 
 def getstrandhybridizationregions(strand, sort="5p3p"):
@@ -211,6 +209,7 @@ def getstrandhybridizationregions(strand, sort="5p3p"):
     # print(" - hyb_regions:", hyb_regions)
     return hyb_regions
 
+
 def getstrandhybridizationseqs(strand, **kwargs):
     """
     Consider the strand and it's two complementary segments:
@@ -244,6 +243,7 @@ def getstrandhybridizationseqs(strand, **kwargs):
     # Return [(idx, (strandItemString, insertionItemString), ...]
     return hyb_seqs
 
+
 def getstrandhybridizationtm(strand, **kwargs):
     """
     Consider the strand and it's two complementary segments:
@@ -275,7 +275,6 @@ def getstrandhybridizationtm(strand, **kwargs):
         raise ValueError("hyb_seqs {} produced by strand {} part of oligo {} raised IndexError {}"
                          .format(hyb_seqs, strand, strand.oligo(), e))
     return hyb_TMs
-
 
 
 def getstrandhybridizationlengths(strand, **kwargs):
@@ -312,6 +311,7 @@ def getstrandhybridizationlengths(strand, **kwargs):
     #else:
     #    return hyb_stretches[::-1]
 
+
 def getstrandhybridizationmask(strand):
     """
     Returns a "hybridization mask" indicating for each base whether the strand is paired (True) or not (False).
@@ -322,7 +322,6 @@ def getstrandhybridizationmask(strand):
     mask = [compl_ss.strand_array[base_idx] is not None
             for base_idx in range(strand._base_idx_low, strand._base_idx_high+1)]
     return mask
-
 
 
 def get_oligo_hyb_lengths(cadnanopart, stapleoligos=True, scaffoldoligos=False):

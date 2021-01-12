@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 # Note: Use pytest-capturelog to capture and display logging messages during pytest
 
 
-
 def leftrightmaxdiff(T_array, boundary=None, boundary_min=None):
     """
     For each element in T_array, calculate the difference vs the max up to that element.
@@ -59,7 +58,6 @@ def leftrightmaxdiff(T_array, boundary=None, boundary_min=None):
     leftbound = [T_pad[i]-max(T_pad[:i]) for i in range(1, len(T_array)+1)]
     rightbound = [T_pad[i]-max(T_pad[i+1:]) for i in range(1, len(T_array)+1)]
     return leftbound, rightbound
-
 
 
 def valleyfinder(T_array, margin=0):
@@ -90,6 +88,7 @@ def valleyfinder(T_array, margin=0):
     pointsdiffs = zip(*leftrightmaxdiff(T_array))
     valleyarray = [1 if all(diff < -margin for diff in difftup) else 0 for difftup in pointsdiffs]
     return valleyarray
+
 
 def valleysize(T_array, margin=0):
     """
@@ -200,8 +199,6 @@ def globalmaxcount(T_array, margin=0):
 def maxlength(T_array, margin=0):
     """ Margin has no effect, only for convenience. """
     return max(T_array) if T_array else 0
-
-
 
 
 def frequencies(scores, binning=None):

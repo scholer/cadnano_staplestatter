@@ -35,13 +35,14 @@ Package structure:
 from __future__ import absolute_import, print_function
 
 import cadnano
-from .cadnano_staplestatter import StaplestatterHandler
 
 try:
-    pass
+    from .cadnano_staplestatter import StaplestatterHandler
 except ImportError as e:
-    msg = "\nImportError: %s - either the cadnano version is too old for this plugin, or you are running without cadnano. Staplestatter will not be available for cadnano as a plugin.\n" % (e, )
-    print(msg)
+    print("\nERROR loading cadnano_staplestatter plugin: (ImportError, %s) %s" % (type(e).__name__, e,))
+    print('If the error is "No module named \'yaml\'", then please install the yaml package (using e.g. pip or conda).')
+    print("Alternatively, the cadnano version is too old for this plugin, or you are trying to load the module outside cadnano.")
+    print("Staplestatter will not be available for cadnano as a plugin.\n")
 else:
     # If no ImportError:
     def documentWindowWasCreatedSlot(document, win):
