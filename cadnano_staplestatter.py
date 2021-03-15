@@ -327,7 +327,7 @@ class StaplestatterHandler(object):
             filepath = self.getSpecfilepath()
         directivestr = self.getDirectiveStr()
         try:
-            with open(filepath, 'wb') as fd:
+            with open(filepath, 'w') as fd:
                 fd.write(directivestr)
         except IOError:
             print("Could not save directive to spec file: ", filepath)
