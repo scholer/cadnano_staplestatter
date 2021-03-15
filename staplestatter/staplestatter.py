@@ -119,10 +119,6 @@ def score_part_v1(cadnano_part, hyb_method="TM", hyb_kwargs=None):
     return valleyscore
 
 
-
-
-
-
 def score_part_oligos(cadnano_part, scoremethod=None, scoremethod_kwargs=None, hyb_method="length", hyb_kwargs=None):
     """
     Evaluate part oligos.
@@ -182,7 +178,6 @@ def get_highest_scores(scores, highest=10, threshold=0, printstats=False, printt
     return score_name_tups
 
 
-
 def plotpartstats(part=None, designname=None, figsize=None, scoremethod_kwargs=None, hyb_method="TM", hyb_kwargs=None):
     """
     Reference method, will plot a "default" stat spec.
@@ -229,15 +224,16 @@ def plotpartstats(part=None, designname=None, figsize=None, scoremethod_kwargs=N
                                    hyb_method=hyb_method, hyb_kwargs=hyb_kwargs)
         allscores.append(scores)
         score_freqs = statutils.frequencies(scores, binning=1)
-        plot_frequencies(score_freqs,
-                         gridspec=gsdefs[i], #ax=scoreaxes[i],
-                         xlim_min=-0.5,
-                         xlabel=xlabels[i],
-                         ylabel="Count",
-                         title=titles[i],
-                         label=designname[:10],
-                         color=colors[i],
-                        )
+        plot_frequencies(
+            score_freqs,
+            gridspec=gsdefs[i], #ax=scoreaxes[i],
+            xlim_min=-0.5,
+            xlabel=xlabels[i],
+            ylabel="Count",
+            title=titles[i],
+            label=designname[:10],
+            color=colors[i],
+        )
 
     return fig, allscores
 
@@ -315,7 +311,6 @@ def process_statspec(statspec, part=None, designname=None, fig=None, ax=None):
     return scores
 
 
-
 def process_statspecs(directive, part=None, designname=None):
     """
     Main processor for the staplestatter directive. Responsible for:
@@ -369,9 +364,10 @@ def process_statspecs_file(filepath):
         directive = yaml.load(fd)
     return process_statspecs(directive)
 
+
 def savestats(stats, filepath):
     """ save stats to filepath """
     try:
-        yaml.dump(stats, open(filepath, 'wb'))
+        yaml.dump(stats, open(filepath, 'w'))  # 'wb' mode for python2, 'w' mode for python3.
     except IOError as e:
         print("IOError while saving stats to file:", filepath, " : ", e)

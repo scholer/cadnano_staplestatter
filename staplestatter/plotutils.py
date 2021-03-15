@@ -188,7 +188,6 @@ def plot_frequencies(scorefreqs, min_score_visible=5, xlabel="Score", ylabel="Fr
     return ax, lines
 
 
-
 def plot_statspec(scorefreqs, plotspec, fig=None, ax=None):
     """
     Used by staplestatter.process_statspec() to plot score frequences.

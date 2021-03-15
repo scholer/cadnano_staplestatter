@@ -263,7 +263,7 @@ class StaplestatterHandler(object):
     def saveStatsToFileSlot(self):
         """ Qt event slot, saves stats to file. """
         print("saveStatsToFileSlot() invoked by pressing browseStatsfileButton.")
-        cur =  str(self.staplestatterDialog.plotsfileLineEdit.text())
+        cur = str(self.staplestatterDialog.statsfileLineEdit.text())
         directory = os.path.dirname(cur) if cur else self._fileOpenPath
         filepath = self.browseForNewOrExistingFile(dialog_title="Save stats as file...", directory=directory)
         if not filepath:
@@ -273,7 +273,7 @@ class StaplestatterHandler(object):
         if self._lastResult:
             staplestatter.savestats(self._lastResult['scores'], filepath)
         else:
-            print("No stats yet: self._lastResult: ", self._lastResult)
+            print("No stats yet. Run process and plot once first. self._lastResult: ", self._lastResult)
 
     def newSpecfileSlot(self):
         """ Qt event slot, creates new specfile. """
